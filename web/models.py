@@ -708,7 +708,7 @@ class PeerConnection(models.Model):
 
 
 class PeerMessage(models.Model):
-    """Direct messages between connected peers."""
+    """Direct messages between connected."""
 
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_messages")
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name="received_messages")
@@ -976,6 +976,24 @@ class Goods(models.Model):
             return first_image.image.url
         # Return a default placeholder image
         return '/static/images/placeholder.png'
+
+    @property
+    def image_url(self):
+        """Return the URL of the first product image, or a default image if none exists."""
+        # Get images using the related name "goods_images" from ProductImage model
+        first_image = self.goods_images.first()
+        if first_image and first_image.image:
+            return first_image.image.url
+        # Return a default placeholder image
+        return "/static/images/placeholder.png"
+
+    @property
+    def image(self):
+        first_image = self.goods_images.first()
+        if first_image and first_image.image:
+            return first_image.image.url
+        # Return a default placeholder image
+        return "/static/images/placeholder.png"
 
     def clean(self):
         # Validate discount logic
