@@ -85,12 +85,16 @@ INSTALLED_APPS = [
     "django.contrib.humanize",
     "allauth",
     "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     "captcha",
     "markdownx",
+    "django_browser_reload",
+    "channels",
     "web",
 ]
 
-if DEBUG and not TESTING:
+if DEBUG and not TESTING and "django_browser_reload" not in INSTALLED_APPS:
     INSTALLED_APPS.append("django_browser_reload")
 
 MIDDLEWARE = [
@@ -357,3 +361,21 @@ USE_X_FORWARDED_HOST = True
 # GitHub API Token for fetching contributor data
 # Use empty string as default to avoid errors when the token is not set
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+
+# Channels configuration
+ASGI_APPLICATION = "web.asgi.application"
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
+
+# For production, use Redis as the channel layer:
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {
+#             "hosts": [os.environ.get("REDIS_URL", "redis://localhost:6379/0")],
+#         },
+#     },
+# }

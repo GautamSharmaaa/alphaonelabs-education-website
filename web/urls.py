@@ -5,7 +5,7 @@ from django.contrib import admin
 from django.contrib.auth.decorators import login_required
 from django.urls import include, path
 
-from . import admin_views, peer_challenge_views, quiz_views, views
+from . import admin_views, peer_challenge_views, quiz_views, views, virtual_classroom_views
 from .views import (
     GoodsListingView,
     GradeableLinkCreateView,
@@ -329,6 +329,34 @@ urlpatterns += i18n_patterns(
     ),
     prefix_default_language=True,
 )
+
+if settings.USE_I18N:
+    # Add virtual classroom URLs to the main urlpatterns
+    urlpatterns += i18n_patterns(
+        # Virtual Classroom URLs
+        path(
+            "sessions/<int:session_id>/classroom/", virtual_classroom_views.virtual_classroom, name="virtual_classroom"
+        ),
+        path("classroom/<int:classroom_id>/select-seat/", virtual_classroom_views.select_seat, name="select_seat"),
+        path("classroom/raise-hand/", virtual_classroom_views.raise_hand, name="raise_hand"),
+        path(
+            "classroom/start-speaking/<int:hand_raise_id>/",
+            virtual_classroom_views.start_speaking,
+            name="start_speaking",
+        ),
+        path("classroom/upload-content/<int:seat_id>/", virtual_classroom_views.upload_content, name="upload_content"),
+        path(
+            "classroom/<int:classroom_id>/start-update-round/",
+            virtual_classroom_views.start_update_round,
+            name="start_update_round",
+        ),
+        path(
+            "classroom/end-update-turn/<int:turn_id>/", virtual_classroom_views.end_update_turn, name="end_update_turn"
+        ),
+        path("classroom/content/<int:content_id>/", virtual_classroom_views.content_detail, name="content_detail"),
+        path("classroom/<int:classroom_id>/raised-hands/", virtual_classroom_views.raised_hands, name="raised_hands"),
+        prefix_default_language=True,
+    )
 
 handler404 = "web.views.custom_404"
 handler500 = "web.views.custom_500"

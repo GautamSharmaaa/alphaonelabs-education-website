@@ -1,0 +1,1926 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}Virtual Classroom: {{ session.title }}{% endblock %}
+{% block content %}
+  <div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-4">{{ session.title }}</h1>
+    <div class="mb-4">
+      <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">
+        {{ session.start_time|date:"F j, Y, g:i a" }}
+      </span>
+      <span class="ml-2 text-gray-600 dark:text-gray-300">{{ session.course.title }}</span>
+    </div>
+    <!-- Notification Toast -->
+    <div id="notification"
+         class="fixed top-4 right-4 z-50 bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded shadow-md hidden transition-opacity duration-300 ease-in-out max-w-md">
+      Notification Message
+    </div>
+    <!-- Teacher controls (visible only to teacher) -->
+    {% if is_teacher %}
+      <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 mb-6 border-l-4 border-blue-500">
+        <h2 class="text-xl font-bold mb-2">Teacher Controls</h2>
+        <div class="flex flex-wrap gap-3">
+          <button id="startUpdateRoundBtn"
+                  class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            Start Update Round (2min)
+          </button>
+          <div class="dropdown inline-block relative">
+            <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+              <span>More Options</span>
+              <svg class="ml-2 w-4 h-4"
+                   fill="none"
+                   stroke="currentColor"
+                   viewBox="0 0 24 24"
+                   xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div class="dropdown-menu hidden absolute bg-white dark:bg-gray-700 shadow-lg rounded mt-1 py-2 w-48 z-10">
+              <a href="#"
+                 id="clearAllSeatsBtn"
+                 class="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">Clear All Seats</a>
+              <a href="#"
+                 id="randomizeSeatsBtn"
+                 class="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">Randomize Seats</a>
+              <a href="#"
+                 id="endClassBtn"
+                 class="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">End Class</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Virtual Classroom -->
+      <div class="lg:col-span-2">
+        <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 border dark:border-gray-700">
+          <h2 class="text-xl font-bold mb-4">Classroom</h2>
+          <!-- Teacher's desk at the front -->
+          <div class="bg-gray-100 dark:bg-gray-700 p-3 mb-6 rounded-lg flex items-center justify-center">
+            <div class="bg-blue-100 dark:bg-blue-900 p-2 rounded-lg flex items-center space-x-2 w-48">
+              <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">T</div>
+              <div>
+                <div class="font-semibold">{{ session.course.teacher.username }}</div>
+                <div class="text-xs text-gray-600 dark:text-gray-400">Teacher</div>
+              </div>
+            </div>
+          </div>
+          <!-- Student seating grid -->
+          <div class="grid grid-cols-{{ classroom.columns }} gap-2 mb-4">
+            {% for seat in seats %}
+              <div class="seat relative"
+                   data-row="{{ seat.row }}"
+                   data-col="{{ seat.column }}"
+                   data-id="{{ seat.id }}"
+                   data-status="{{ seat.status }}">
+                <div class="aspect-w-1 aspect-h-1">
+                  <div class="w-full h-full flex items-center justify-center {% if seat.status == 'empty' %}bg-gray-100 dark:bg-gray-700 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 {% elif seat.status == 'occupied' %}bg-green-100 dark:bg-green-900/30 border-2 border-green-300 dark:border-green-700 {% elif seat.status == 'hand_raised' %}bg-yellow-100 dark:bg-yellow-900/30 border-2 border-yellow-400 dark:border-yellow-700 {% elif seat.status == 'speaking' %}bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-400 dark:border-blue-700 animate-pulse {% endif %} rounded-lg p-1">
+                    {% if seat.student %}
+                      <div class="text-center">
+                        <div class="avatar w-8 h-8 mx-auto bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center text-gray-700 dark:text-gray-300 font-bold">
+                          {% if seat.student.profile.avatar %}
+                            <img src="{{ seat.student.profile.avatar.url }}"
+                                 alt="{{ seat.student.username }}"
+                                 class="rounded-full w-full h-full object-cover" />
+                          {% else %}
+                            {{ seat.student.username|first|upper }}
+                          {% endif %}
+                        </div>
+                        <div class="text-xs mt-1 font-medium truncate">{{ seat.student.username }}</div>
+                      </div>
+                    {% else %}
+                      <div class="text-xs text-gray-500 dark:text-gray-400">Empty Seat</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <!-- Virtual laptop icon (only if seat is occupied) -->
+                {% if seat.student %}
+                  <button class="absolute bottom-0 right-0 bg-white dark:bg-gray-600 rounded-full p-1 shadow-md laptop-btn"
+                          data-seat-id="{{ seat.id }}">
+                    <svg class="w-4 h-4 text-gray-600 dark:text-gray-300"
+                         fill="none"
+                         stroke="currentColor"
+                         viewBox="0 0 24 24"
+                         xmlns="http://www.w3.org/2000/svg">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+                    </svg>
+                  </button>
+                {% endif %}
+                <!-- Hand raise icon -->
+                {% if seat.status == 'hand_raised' %}
+                  <div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <svg class="w-5 h-5 text-yellow-500"
+                         fill="currentColor"
+                         viewBox="0 0 20 20"
+                         xmlns="http://www.w3.org/2000/svg">
+                      <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd">
+                      </path>
+                    </svg>
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+        <!-- Active Update Round (if exists) -->
+        {% if active_update_round %}
+          <div id="updateRoundContainer"
+               class="mt-4 bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 border-l-4 border-purple-500">
+            <h3 class="text-lg font-bold mb-2">Update Round</h3>
+            <div class="flex items-center mb-3">
+              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                <div id="timerProgress"
+                     class="bg-purple-600 h-2.5 rounded-full"
+                     style="width: 100%"></div>
+              </div>
+              <span id="remainingTime" class="ml-2 text-sm font-medium">2:00</span>
+            </div>
+            {% if current_turn %}
+              <div id="currentSpeaker"
+                   class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-2">
+                <p class="font-medium">
+                  Current speaker: <span class="font-bold">{{ current_turn.seat.student.username }}</span>
+                </p>
+                <!-- Show "Done" button only if this is the current user or the teacher -->
+                {% if request.user == current_turn.seat.student or is_teacher %}
+                  <button id="endTurnBtn"
+                          data-turn-id="{{ current_turn.id }}"
+                          class="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm">
+                    {% if request.user == current_turn.seat.student %}
+                      I'm Done
+                    {% else %}
+                      Next Student
+                    {% endif %}
+                  </button>
+                {% endif %}
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+      <!-- Sidebar -->
+      <div class="lg:col-span-1">
+        <!-- Student Controls (if student) -->
+        {% if is_student and not is_teacher %}
+          <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 mb-4 border dark:border-gray-700">
+            <h2 class="text-xl font-bold mb-4">Student Controls</h2>
+            {% if not user_seat %}
+              <div class="mb-4 text-center">
+                <p class="text-gray-700 dark:text-gray-300 mb-2">Please select an available seat to join the class</p>
+              </div>
+            {% else %}
+              <div class="flex flex-col gap-2">
+                <button id="raiseHandBtn"
+                        class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded">
+                  {% if user_seat.status == 'hand_raised' %}
+                    Lower Hand
+                  {% else %}
+                    Raise Hand
+                  {% endif %}
+                </button>
+                <button id="shareLaptopBtn"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                  Open Laptop
+                </button>
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+        <!-- Hand Raise Queue (for teacher) -->
+        {% if is_teacher %}
+          <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 mb-4 border dark:border-gray-700">
+            <h2 class="text-xl font-bold mb-4">Raised Hands</h2>
+            {% if active_hand_raises %}
+              <ul class="space-y-2" id="raisedHandsQueue">
+                {% for hand_raise in active_hand_raises %}
+                  <li class="flex items-center justify-between p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                    <div class="flex items-center">
+                      <div class="w-8 h-8 bg-yellow-200 dark:bg-yellow-700 rounded-full flex items-center justify-center text-yellow-800 dark:text-yellow-100 font-bold mr-2">
+                        {{ hand_raise.seat.student.username|first|upper }}
+                      </div>
+                      <span>{{ hand_raise.seat.student.username }}</span>
+                    </div>
+                    <button class="call-on-student-btn bg-blue-500 hover:bg-blue-700 text-white text-xs font-bold py-1 px-2 rounded"
+                            data-hand-raise-id="{{ hand_raise.id }}">Call On</button>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="text-gray-500 dark:text-gray-400 text-center">No hands raised</p>
+            {% endif %}
+          </div>
+        {% endif %}
+        <!-- Shared Content -->
+        <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 border dark:border-gray-700">
+          <h2 class="text-xl font-bold mb-4">Shared Content</h2>
+          <div id="sharedContentContainer">
+            <p class="text-gray-500 dark:text-gray-400 text-center">No content shared yet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Laptop Modal -->
+  <div id="laptopModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black bg-opacity-50" id="laptopModalOverlay"></div>
+    <div class="fixed inset-10 bg-white dark:bg-gray-800 rounded-lg shadow-xl flex flex-col overflow-hidden">
+      <div class="p-4 border-b dark:border-gray-700 flex justify-between items-center">
+        <h3 class="text-xl font-bold" id="laptopModalTitle">Student's Laptop</h3>
+        <button id="closeLaptopModal"
+                class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+          <svg class="w-6 h-6"
+               fill="none"
+               stroke="currentColor"
+               viewBox="0 0 24 24"
+               xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="flex-1 overflow-auto p-4">
+        <div class="tabs flex border-b dark:border-gray-700">
+          <button class="laptop-tab py-2 px-4 font-medium border-b-2 border-blue-500"
+                  data-tab="code">Code Editor</button>
+          <button class="laptop-tab py-2 px-4 font-medium border-b-2 border-transparent"
+                  data-tab="notes">Notes</button>
+          <button class="laptop-tab py-2 px-4 font-medium border-b-2 border-transparent"
+                  data-tab="chat">Chat</button>
+        </div>
+        <div class="tab-content mt-4" id="codeTab">
+          <div class="mb-2 flex justify-between items-center">
+            <div>
+              <label for="programmingLanguage" class="mr-2 text-sm font-medium">Language:</label>
+              <select id="programmingLanguage"
+                      class="p-1 border dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900">
+                <option value="python">Python</option>
+                <option value="javascript">JavaScript</option>
+                <option value="java">Java</option>
+                <option value="csharp">C#</option>
+              </select>
+            </div>
+            <div>
+              <button id="runCodeBtn"
+                      class="bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded text-sm">Run Code</button>
+              <button id="shareCodeBtn"
+                      class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-sm ml-2">Share</button>
+            </div>
+          </div>
+          <div id="codeEditor"
+               class="border dark:border-gray-700 rounded-lg h-64 font-mono text-sm p-2 bg-gray-50 dark:bg-gray-900">
+          </div>
+          <div class="mt-4">
+            <h4 class="font-bold text-sm mb-1">Output:</h4>
+            <div id="codeOutput"
+                 class="border dark:border-gray-700 rounded-lg h-32 font-mono text-sm p-2 bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+            </div>
+          </div>
+        </div>
+        <div class="tab-content mt-4 hidden" id="notesTab">
+          <textarea id="studentNotes"
+                    class="w-full h-96 p-2 border dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900"
+                    placeholder="Take notes here..."></textarea>
+          <div class="mt-2 flex justify-end">
+            <button id="shareNotesBtn"
+                    class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-sm">Share Notes</button>
+          </div>
+        </div>
+        <div class="tab-content mt-4 hidden" id="chatTab">
+          <div id="chatMessages"
+               class="border dark:border-gray-700 rounded-lg h-80 overflow-y-auto p-2 bg-gray-50 dark:bg-gray-900 mb-2">
+            <div class="text-gray-500 dark:text-gray-400 text-center text-sm p-4">Chat messages will appear here</div>
+          </div>
+          <div class="flex">
+            <input type="text"
+                   id="chatInput"
+                   class="flex-1 p-2 border dark:border-gray-700 rounded-l-lg bg-gray-50 dark:bg-gray-900"
+                   placeholder="Type a message..." />
+            <button id="sendChatBtn"
+                    class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-r-lg">Send</button>
+          </div>
+          <div class="mt-2">
+            <select id="chatRecipient"
+                    class="w-full p-2 border dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900">
+              <option value="everyone">Everyone</option>
+              <option value="teacher">Teacher Only</option>
+              <!-- Additional students will be added dynamically -->
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block extra_js %}
+  <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.22.0/src-min-noconflict/ace.js"></script>
+  <script>
+      document.addEventListener('DOMContentLoaded', function() {
+          // WebSocket Setup
+          const classroomId = '{{ classroom.id }}';
+          const currentUserId = '{{ request.user.id }}';
+          const currentUsername = '{{ request.user.username }}';
+          const isTeacher = {
+              %
+              if is_teacher %
+          }
+          true {
+              %
+              else %
+          }
+          false {
+              %
+              endif %
+          };
+
+          // Initialize WebSocket with improved reconnection logic
+          let socket;
+          let reconnectAttempts = 0;
+          const maxReconnectAttempts = 5;
+          const reconnectDelay = 3000; // 3 seconds
+
+          function connectWebSocket() {
+              // Close existing socket if present
+              if (socket) {
+                  try {
+                      socket.close();
+                  } catch (err) {
+                      console.warn('Error closing existing socket:', err);
+                  }
+              }
+
+              try {
+                  // Use secure connection when available
+                  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                  const wsUrl = `${wsProtocol}//${window.location.host}/ws/classroom/${classroomId}/`;
+
+                  socket = new WebSocket(wsUrl);
+
+                  socket.onopen = function(e) {
+                      console.log('WebSocket connection established');
+                      showNotification('Connected to classroom');
+                      reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+
+                      // Initialize the seat status and student list
+                      updateStudentList();
+
+                      // Send authentication if needed
+                      // sendWebSocketMessage({
+                      //     'type': 'authenticate',
+                      //     'token': getCSRFToken()
+                      // });
+                  };
+
+                  socket.onmessage = function(e) {
+                      try {
+                          const data = JSON.parse(e.data);
+                          console.log('WebSocket message received:', data);
+
+                          switch (data.type) {
+                              case 'seat_update':
+                                  updateSeatStatus(data.seat_id, data.status, {
+                                      id: data.student_id,
+                                      username: data.student_name
+                                  });
+                                  break;
+                              case 'hand_raise':
+                                  handleHandRaise(data.seat_id, data.raised, data.student_name);
+                                  break;
+                              case 'speaking_update':
+                                  handleSpeakingUpdate(data.seat_id, data.is_speaking, data.student_name);
+                                  break;
+                              case 'update_round':
+                                  handleUpdateRound(data.round_id, data.action, data.current_student, data.remaining_time);
+                                  break;
+                              case 'content_shared':
+                                  handleContentShared(data.seat_id, data.content_id, data.content_type, data.student_name);
+                                  break;
+                              case 'chat_message':
+                                  handleChatMessage(data.sender_id, data.sender_name, data.message, data.recipient);
+                                  break;
+                              case 'error':
+                                  console.error('Server reported error:', data.message);
+                                  showNotification(`Server error: ${data.message}`, true);
+                                  break;
+                              default:
+                                  console.log('Unknown message type:', data.type);
+                          }
+                      } catch (error) {
+                          console.error('Error processing WebSocket message:', error, e.data);
+                          showNotification('Error processing message from server', true);
+                      }
+                  };
+
+                  socket.onclose = function(e) {
+                      console.log('WebSocket connection closed', e.code, e.reason);
+
+                      // Check if this was an abnormal closure
+                      if (e.wasClean) {
+                          console.log('WebSocket closed cleanly:', e.code, e.reason);
+                          showNotification('Disconnected from classroom');
+                      } else {
+                          console.warn('WebSocket connection interrupted:', e.code);
+                          showNotification('Connection lost', true);
+
+                          // Attempt to reconnect if not a normal closure
+                          if (reconnectAttempts < maxReconnectAttempts) {
+                              reconnectAttempts++;
+                              showNotification(`Reconnecting... (${reconnectAttempts}/${maxReconnectAttempts})`, false, 'yellow');
+                              setTimeout(connectWebSocket, reconnectDelay);
+                          } else {
+                              showNotification('Unable to connect to classroom. Please refresh the page.', true);
+                          }
+                      }
+                  };
+
+                  socket.onerror = function(error) {
+                      console.error('WebSocket error:', error);
+                      showNotification('Connection error. Please check your internet connection.', true);
+                  };
+              } catch (error) {
+                  console.error('Error initializing WebSocket:', error);
+                  showNotification('Failed to connect to classroom. Please refresh the page.', true);
+
+                  // Still try to reconnect
+                  if (reconnectAttempts < maxReconnectAttempts) {
+                      reconnectAttempts++;
+                      setTimeout(connectWebSocket, reconnectDelay);
+                  }
+              }
+          }
+
+          // Helper function to safely send WebSocket messages
+          function sendWebSocketMessage(message) {
+              try {
+                  if (socket && socket.readyState === WebSocket.OPEN) {
+                      socket.send(JSON.stringify(message));
+                      return true;
+                  } else {
+                      console.warn('Socket not ready, message not sent:', message);
+                      showNotification('Not connected to classroom. Please refresh the page.', true);
+                      return false;
+                  }
+              } catch (error) {
+                  console.error('Error sending WebSocket message:', error);
+                  showNotification('Failed to send message', true);
+                  return false;
+              }
+          }
+
+          // Initial connection
+          connectWebSocket();
+
+          // Periodically check connection health and reconnect if needed
+          setInterval(function() {
+              if (socket && socket.readyState === WebSocket.CLOSED) {
+                  if (reconnectAttempts < maxReconnectAttempts) {
+                      connectWebSocket();
+                  }
+              }
+          }, 10000); // Check every 10 seconds
+
+          // Dropdown toggle
+          document.querySelectorAll('.dropdown').forEach(dropdown => {
+              const button = dropdown.querySelector('button');
+              const menu = dropdown.querySelector('.dropdown-menu');
+
+              if (button && menu) {
+                  button.addEventListener('click', function(e) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      menu.classList.toggle('hidden');
+                  });
+
+                  // Close dropdown when clicking outside
+                  document.addEventListener('click', function() {
+                      menu.classList.add('hidden');
+                  });
+              }
+          });
+
+          // Seat Selection
+          document.querySelectorAll('.seat[data-status="empty"]').forEach(seat => {
+              seat.addEventListener('click', function() {
+                  if (isTeacher) return; // Teachers can't select seats
+
+                  const seatId = this.dataset.id;
+
+                  // Send AJAX request to select seat
+                  fetch(`/classroom/${classroomId}/select-seat/`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-CSRFToken': getCSRFToken()
+                          },
+                          body: JSON.stringify({
+                              seat_id: seatId
+                          })
+                      })
+                      .then(response => {
+                          if (!response.ok) {
+                              throw new Error('Failed to select seat');
+                          }
+                          return response.json();
+                      })
+                      .then(data => {
+                          console.log('Seat selected:', data);
+                          showNotification('Seat selected successfully');
+                          // The WebSocket will handle the seat update notification
+                      })
+                      .catch(error => {
+                          console.error('Error selecting seat:', error);
+                          showNotification('Failed to select seat. Please try again.', true);
+                      });
+              });
+          });
+
+          // Laptop Modal
+          const laptopModal = document.getElementById('laptopModal');
+          const laptopModalOverlay = document.getElementById('laptopModalOverlay');
+          const closeLaptopModal = document.getElementById('closeLaptopModal');
+          let currentSeatId = null;
+
+          // Initialize Ace Editor
+          let codeEditor = null;
+          if (document.getElementById('codeEditor')) {
+              try {
+                  codeEditor = ace.edit("codeEditor");
+                  codeEditor.setTheme("ace/theme/monokai");
+                  codeEditor.session.setMode("ace/mode/python");
+                  codeEditor.setFontSize(14);
+              } catch (error) {
+                  console.error('Failed to initialize code editor:', error);
+              }
+          }
+
+          // Open laptop button
+          const openLaptopBtn = document.getElementById('openLaptopBtn');
+          if (openLaptopBtn && laptopModal) {
+              openLaptopBtn.addEventListener('click', function() {
+                  // Find user's current seat
+                  let userSeat = null;
+                  document.querySelectorAll('.seat').forEach(seat => {
+                      const nameElement = seat.querySelector('.text-xs.mt-1');
+                      if (nameElement && nameElement.textContent === currentUsername) {
+                          userSeat = seat;
+                      }
+                  });
+
+                  if (userSeat) {
+                      currentSeatId = userSeat.dataset.id;
+                      const laptopModalTitle = document.getElementById('laptopModalTitle');
+                      if (laptopModalTitle) {
+                          laptopModalTitle.textContent = `My Laptop`;
+                      }
+                      laptopModal.classList.remove('hidden');
+
+                      if (codeEditor) {
+                          codeEditor.setReadOnly(false);
+                      }
+
+                      const studentNotes = document.getElementById('studentNotes');
+                      const chatInput = document.getElementById('chatInput');
+                      const sendChatBtn = document.getElementById('sendChatBtn');
+
+                      if (studentNotes) studentNotes.readOnly = false;
+                      if (chatInput) chatInput.disabled = false;
+                      if (sendChatBtn) sendChatBtn.disabled = false;
+                  } else {
+                      // No seat found for the current user
+                      showNotification('Please select a seat before opening your laptop', true);
+                  }
+              });
+          }
+
+          // Share laptop button with proper seat checking
+          const shareLaptopBtn = document.getElementById('shareLaptopBtn');
+          if (shareLaptopBtn) {
+              shareLaptopBtn.addEventListener('click', function() {
+                  // Find user's current seat
+                  let userSeat = null;
+                  document.querySelectorAll('.seat').forEach(seat => {
+                      const nameElement = seat.querySelector('.text-xs.mt-1');
+                      if (nameElement && nameElement.textContent === currentUsername) {
+                          userSeat = seat;
+                      }
+                  });
+
+                  if (!userSeat) {
+                      showNotification('Please select a seat first before sharing your laptop', true);
+                      return;
+                  }
+
+                  // Get content to share
+                  const laptopTabs = document.querySelectorAll('.laptop-tab');
+                  let activeTab = 'code';
+                  laptopTabs.forEach(tab => {
+                      if (tab.classList.contains('border-blue-500')) {
+                          activeTab = tab.dataset.tab;
+                      }
+                  });
+
+                  let content = null;
+
+                  if (activeTab === 'code' && codeEditor) {
+                      const code = codeEditor.getValue();
+                      const language = document.getElementById('programmingLanguage') ?
+                          document.getElementById('programmingLanguage').value : 'text';
+
+                      content = {
+                          'code': code,
+                          'language': language
+                      };
+                  } else if (activeTab === 'notes') {
+                      const notes = document.getElementById('studentNotes') ?
+                          document.getElementById('studentNotes').value : '';
+
+                      content = {
+                          'notes': notes
+                      };
+                  }
+
+                  if (content) {
+                      try {
+                          sendWebSocketMessage({
+                              'type': 'share_content',
+                              'content_type': activeTab,
+                              'content': content
+                          });
+
+                          showNotification(`${activeTab} shared successfully`);
+                      } catch (error) {
+                          console.error(`Error sharing ${activeTab}:`, error);
+                          showNotification(`Failed to share ${activeTab}`, true);
+                      }
+                  }
+              });
+          }
+
+          // Close laptop modal
+          if (closeLaptopModal) {
+              closeLaptopModal.addEventListener('click', function() {
+                  laptopModal.classList.add('hidden');
+              });
+          }
+
+          if (laptopModalOverlay) {
+              laptopModalOverlay.addEventListener('click', function() {
+                  laptopModal.classList.add('hidden');
+              });
+          }
+
+          // Fix URL paths for API calls
+          document.querySelectorAll('.call-on-student-btn').forEach(btn => {
+              btn.addEventListener('click', function() {
+                  const handRaiseId = this.dataset.handRaiseId;
+
+                  fetch(`/classroom/start-speaking/${handRaiseId}/`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-CSRFToken': getCSRFToken()
+                          }
+                      })
+                      .then(response => {
+                          if (!response.ok) {
+                              throw new Error('Failed to call on student');
+                          }
+                          return response.json();
+                      })
+                      .then(data => {
+                          console.log('Called on student:', data);
+                      })
+                      .catch(error => {
+                          console.error('Error calling on student:', error);
+                          showNotification('Failed to call on student', true);
+                      });
+              });
+          });
+
+          // Tab switching
+          document.querySelectorAll('.laptop-tab').forEach(tab => {
+              tab.addEventListener('click', function() {
+                  // Update tab styling
+                  document.querySelectorAll('.laptop-tab').forEach(t => {
+                      t.classList.remove('border-blue-500');
+                      t.classList.add('border-transparent');
+                  });
+                  this.classList.remove('border-transparent');
+                  this.classList.add('border-blue-500');
+
+                  // Show corresponding tab content
+                  const tabName = this.dataset.tab;
+                  document.querySelectorAll('.tab-content').forEach(content => {
+                      content.classList.add('hidden');
+                  });
+                  document.getElementById(`${tabName}Tab`).classList.remove('hidden');
+              });
+          });
+
+          // Programming language change
+          const programmingLanguageSelect = document.getElementById('programmingLanguage');
+          if (programmingLanguageSelect && codeEditor) {
+              programmingLanguageSelect.addEventListener('change', function() {
+                  const language = this.value;
+                  const modeMap = {
+                      'python': 'python',
+                      'javascript': 'javascript',
+                      'java': 'java',
+                      'csharp': 'csharp',
+                      'cpp': 'c_cpp'
+                  };
+
+                  if (modeMap[language]) {
+                      try {
+                          codeEditor.session.setMode(`ace/mode/${modeMap[language]}`);
+                      } catch (error) {
+                          console.error('Error setting code editor mode:', error);
+                      }
+                  }
+              });
+          }
+
+          // Run code button
+          const runCodeBtn = document.getElementById('runCodeBtn');
+          if (runCodeBtn && codeEditor) {
+              runCodeBtn.addEventListener('click', function() {
+                  const code = codeEditor.getValue();
+                  const language = programmingLanguageSelect.value;
+
+                  // Simulate code execution (in real implementation, this would call a backend API)
+                  const outputElement = document.getElementById('codeOutput');
+                  if (outputElement) {
+                      outputElement.innerHTML = '<div class="text-gray-500">Running code...</div>';
+
+                      setTimeout(() => {
+                          // Simulate output (in real world, this would be the response from the server)
+                          if (language === 'python') {
+                              outputElement.innerHTML = '<pre>Hello, World!</pre>';
+                          } else {
+                              outputElement.innerHTML = '<pre>Program output would appear here</pre>';
+                          }
+                      }, 1000);
+                  }
+              });
+          }
+
+          // Share code button
+          const shareCodeBtn = document.getElementById('shareCodeBtn');
+          if (shareCodeBtn && codeEditor) {
+              shareCodeBtn.addEventListener('click', function() {
+                  try {
+                      const code = codeEditor.getValue();
+                      const language = programmingLanguageSelect ? programmingLanguageSelect.value : 'text';
+
+                      sendWebSocketMessage({
+                          'type': 'share_content',
+                          'content_type': 'code',
+                          'content': {
+                              'code': code,
+                              'language': language
+                          }
+                      });
+
+                      showNotification('Code shared successfully');
+                  } catch (error) {
+                      console.error('Error sharing code:', error);
+                      showNotification('Failed to share code', true);
+                  }
+              });
+          }
+
+          // Share notes button
+          const shareNotesBtn = document.getElementById('shareNotesBtn');
+          if (shareNotesBtn) {
+              shareNotesBtn.addEventListener('click', function() {
+                  const studentNotes = document.getElementById('studentNotes');
+                  if (!studentNotes) return;
+
+                  const notes = studentNotes.value;
+
+                  try {
+                      sendWebSocketMessage({
+                          'type': 'share_content',
+                          'content_type': 'notes',
+                          'content': {
+                              'notes': notes
+                          }
+                      });
+
+                      showNotification('Notes shared successfully');
+                  } catch (error) {
+                      console.error('Error sharing notes:', error);
+                      showNotification('Failed to share notes', true);
+                  }
+              });
+          }
+
+          // Chat functionality
+          const sendChatBtn = document.getElementById('sendChatBtn');
+          if (sendChatBtn) {
+              sendChatBtn.addEventListener('click', function() {
+                  const chatInput = document.getElementById('chatInput');
+                  if (!chatInput) return;
+
+                  const message = chatInput.value.trim();
+                  if (!message) return;
+
+                  const chatRecipient = document.getElementById('chatRecipient');
+                  const recipient = chatRecipient ? chatRecipient.value : 'everyone';
+
+                  try {
+                      sendWebSocketMessage({
+                          'type': 'chat_message',
+                          'message': message,
+                          'recipient': recipient
+                      });
+
+                      // Clear input after sending
+                      chatInput.value = '';
+                  } catch (error) {
+                      console.error('Error sending chat message:', error);
+                      showNotification('Failed to send message', true);
+                  }
+              });
+          }
+
+          // Raise/lower hand
+          const raiseHandBtn = document.getElementById('raiseHandBtn');
+          if (raiseHandBtn) {
+              raiseHandBtn.addEventListener('click', function() {
+                  // Find user's current seat
+                  let userSeat = null;
+                  document.querySelectorAll('.seat').forEach(seat => {
+                      const nameElement = seat.querySelector('.text-xs.mt-1');
+                      if (nameElement && nameElement.textContent === currentUsername) {
+                          userSeat = seat;
+                      }
+                  });
+
+                  if (!userSeat) {
+                      showNotification('Please select a seat first', true);
+                      return;
+                  }
+
+                  const seatId = userSeat.dataset.id;
+                  const isRaised = userSeat.dataset.status === 'hand_raised';
+
+                  // Send AJAX request to raise/lower hand
+                  fetch('/classroom/raise-hand/', {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-CSRFToken': getCSRFToken()
+                          },
+                          body: JSON.stringify({
+                              seat_id: seatId,
+                              raised: !isRaised
+                          })
+                      })
+                      .then(response => {
+                          if (!response.ok) {
+                              throw new Error('Failed to toggle hand');
+                          }
+                          return response.json();
+                      })
+                      .then(data => {
+                          console.log('Hand raised/lowered:', data);
+                          showNotification(isRaised ? 'Hand lowered' : 'Hand raised');
+                          // The WebSocket will handle the hand raise update
+                      })
+                      .catch(error => {
+                          console.error('Error toggling hand:', error);
+                          showNotification('Failed to raise/lower hand', true);
+                      });
+              });
+          }
+
+          // Teacher controls
+          if (isTeacher) {
+              // Start update round
+              const startUpdateRoundBtn = document.getElementById('startUpdateRoundBtn');
+              if (startUpdateRoundBtn) {
+                  startUpdateRoundBtn.addEventListener('click', function() {
+                      fetch(`/classroom/${classroomId}/start-update-round/`, {
+                              method: 'POST',
+                              headers: {
+                                  'Content-Type': 'application/json',
+                                  'X-CSRFToken': getCSRFToken()
+                              },
+                              body: JSON.stringify({
+                                  duration_seconds: 120 // 2 minutes in seconds
+                              })
+                          })
+                          .then(response => {
+                              if (!response.ok) {
+                                  throw new Error('Failed to start update round');
+                              }
+                              return response.json();
+                          })
+                          .then(data => {
+                              console.log('Update round started:', data);
+                              showNotification('Update round started');
+                          })
+                          .catch(error => {
+                              console.error('Error starting update round:', error);
+                              showNotification('Failed to start update round', true);
+                          });
+                  });
+              }
+          }
+
+          // Teacher's view - raised hands queue
+          const viewRaisedHandsBtn = document.getElementById('viewRaisedHandsBtn');
+          if (viewRaisedHandsBtn && isTeacher) {
+              viewRaisedHandsBtn.addEventListener('click', function() {
+                  fetchRaisedHandsQueue();
+              });
+          }
+
+          // Function to fetch raised hands
+          function fetchRaisedHandsQueue() {
+              fetch(`/classroom/${classroomId}/raised-hands/`, {
+                      method: 'GET',
+                      headers: {
+                          'Accept': 'application/json'
+                      }
+                  })
+                  .then(response => {
+                      if (!response.ok) {
+                          throw new Error('Failed to get raised hands queue');
+                      }
+                      return response.json();
+                  })
+                  .then(data => {
+                      if (data.success) {
+                          updateRaisedHandsQueue(data.queue);
+                      }
+                  })
+                  .catch(error => {
+                      console.error('Error fetching raised hands:', error);
+                      showNotification('Failed to fetch raised hands queue', true);
+                  });
+          }
+
+          // Function to update raised hands queue in the UI
+          function updateRaisedHandsQueue(queue) {
+              const queueList = document.getElementById('raisedHandsQueue');
+              if (!queueList) return;
+
+              queueList.innerHTML = '';
+
+              if (queue.length === 0) {
+                  queueList.innerHTML = '<li class="p-2 bg-gray-100 dark:bg-gray-800 rounded">No students have raised their hands.</li>';
+                  return;
+              }
+
+              // Clear any existing event listeners using event delegation pattern
+              queueList.removeEventListener('click', handleQueueButtonClick);
+
+              queue.forEach(item => {
+                  const li = document.createElement('li');
+                  li.className = 'p-2 bg-gray-100 dark:bg-gray-800 rounded mb-2 flex justify-between items-center';
+
+                  const studentInfo = document.createElement('div');
+                  studentInfo.textContent = item.student.username;
+
+                  const callOnBtn = document.createElement('button');
+                  callOnBtn.className = 'bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 text-xs call-on-student-btn';
+                  callOnBtn.textContent = 'Call On';
+                  callOnBtn.dataset.handRaiseId = item.id;
+
+                  li.appendChild(studentInfo);
+                  li.appendChild(callOnBtn);
+                  queueList.appendChild(li);
+              });
+
+              // Add a single event listener using event delegation
+              queueList.addEventListener('click', handleQueueButtonClick);
+          }
+
+          // Event delegation handler for call-on-student buttons
+          function handleQueueButtonClick(event) {
+              const callOnBtn = event.target.closest('.call-on-student-btn');
+              if (!callOnBtn) return; // Not a call-on button
+
+              const handRaiseId = callOnBtn.dataset.handRaiseId;
+              if (!handRaiseId) return;
+
+              callOnStudent(handRaiseId);
+          }
+
+          // Function to call on a student
+          function callOnStudent(handRaiseId) {
+              fetch(`/classroom/start-speaking/${handRaiseId}/`, {
+                      method: 'POST',
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'X-CSRFToken': getCSRFToken()
+                      }
+                  })
+                  .then(response => {
+                      if (!response.ok) {
+                          throw new Error('Failed to call on student');
+                      }
+                      return response.json();
+                  })
+                  .then(data => {
+                      console.log('Student called on:', data);
+                      showNotification(`${data.student.username} is now speaking`);
+                      // The WebSocket will handle the speaking update
+                  })
+                  .catch(error => {
+                      console.error('Error calling on student:', error);
+                      showNotification('Failed to call on student', true);
+                  });
+          }
+
+          // Auto-refresh raised hands queue for teachers
+          if (isTeacher) {
+              setInterval(fetchRaisedHandsQueue, 10000); // Every 10 seconds
+              fetchRaisedHandsQueue(); // Initial fetch
+          }
+
+          // Get CSRF token from cookie
+          function getCSRFToken() {
+              const name = 'csrftoken';
+              let cookieValue = null;
+              if (document.cookie && document.cookie !== '') {
+                  const cookies = document.cookie.split(';');
+                  for (let i = 0; i < cookies.length; i++) {
+                      const cookie = cookies[i].trim();
+                      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                          break;
+                      }
+                  }
+              }
+              return cookieValue;
+          }
+
+          // Helper function to show notification
+          function showNotification(message, isError = false, type = null) {
+              const notification = document.getElementById('notification');
+              if (!notification) return;
+
+              // Clear any existing timeout
+              if (window.notificationTimeout) {
+                  clearTimeout(window.notificationTimeout);
+              }
+
+              // Clear existing classes
+              notification.classList.remove(
+                  'bg-red-100', 'border-red-500', 'text-red-700',
+                  'bg-blue-100', 'border-blue-500', 'text-blue-700',
+                  'bg-green-100', 'border-green-500', 'text-green-700',
+                  'bg-yellow-100', 'border-yellow-500', 'text-yellow-700'
+              );
+
+              // Set the appropriate styling based on type
+              if (isError || type === 'error') {
+                  notification.classList.add('bg-red-100', 'border-red-500', 'text-red-700');
+              } else if (type === 'success') {
+                  notification.classList.add('bg-green-100', 'border-green-500', 'text-green-700');
+              } else if (type === 'warning' || type === 'yellow') {
+                  notification.classList.add('bg-yellow-100', 'border-yellow-500', 'text-yellow-700');
+              } else {
+                  notification.classList.add('bg-blue-100', 'border-blue-500', 'text-blue-700');
+              }
+
+              // Set the notification text
+              notification.textContent = message;
+
+              // Show the notification
+              notification.classList.remove('hidden');
+              notification.style.opacity = '1';
+
+              // Automatically hide after 5 seconds for non-error notifications
+              if (!isError && type !== 'error') {
+                  window.notificationTimeout = setTimeout(() => {
+                      notification.style.opacity = '0';
+                      setTimeout(() => {
+                          notification.classList.add('hidden');
+                      }, 300);
+                  }, 5000);
+              } else {
+                  // For errors, add a close button
+                  const closeBtn = document.createElement('button');
+                  closeBtn.innerHTML = '&times;';
+                  closeBtn.className = 'absolute top-1 right-1 text-lg font-bold';
+                  closeBtn.addEventListener('click', () => {
+                      notification.style.opacity = '0';
+                      setTimeout(() => {
+                          notification.classList.add('hidden');
+                      }, 300);
+                  });
+
+                  // Remove any existing close button before adding a new one
+                  const existingCloseBtn = notification.querySelector('button');
+                  if (existingCloseBtn) {
+                      existingCloseBtn.remove();
+                  }
+
+                  notification.appendChild(closeBtn);
+              }
+          }
+
+          // Helper functions for WebSocket messages
+          function updateSeatStatus(seatId, status, student) {
+              try {
+                  const seatElement = document.querySelector(`.seat[data-id="${seatId}"]`);
+                  if (!seatElement) {
+                      console.warn(`Seat element with ID ${seatId} not found`);
+                      return;
+                  }
+
+                  // Update the seat's status data attribute
+                  seatElement.dataset.status = status || 'empty';
+
+                  // Update the seat's appearance based on the status
+                  const seatContent = seatElement.querySelector('.w-full.h-full');
+                  if (!seatContent) {
+                      console.warn(`Seat content element not found for seat ${seatId}`);
+                      return;
+                  }
+
+                  // Remove all status-related classes
+                  seatContent.classList.remove(
+                      'bg-gray-100', 'dark:bg-gray-700', 'hover:bg-gray-200', 'dark:hover:bg-gray-600',
+                      'bg-green-100', 'dark:bg-green-900/30', 'border-green-300', 'dark:border-green-700',
+                      'bg-yellow-100', 'dark:bg-yellow-900/30', 'border-yellow-400', 'dark:border-yellow-700',
+                      'bg-blue-100', 'dark:bg-blue-900/30', 'border-blue-400', 'dark:border-blue-700',
+                      'animate-pulse', 'border-2'
+                  );
+
+                  // Remove hand icon if it exists (will add back if needed)
+                  const existingHandIcon = seatElement.querySelector('.absolute.-top-4');
+                  if (existingHandIcon) {
+                      existingHandIcon.remove();
+                  }
+
+                  // Add classes based on the new status
+                  if (status === 'empty') {
+                      seatContent.classList.add('bg-gray-100', 'dark:bg-gray-700', 'cursor-pointer', 'hover:bg-gray-200', 'dark:hover:bg-gray-600');
+                  } else if (status === 'occupied') {
+                      seatContent.classList.add('bg-green-100', 'dark:bg-green-900/30', 'border-2', 'border-green-300', 'dark:border-green-700');
+                  } else if (status === 'hand_raised') {
+                      seatContent.classList.add('bg-yellow-100', 'dark:bg-yellow-900/30', 'border-2', 'border-yellow-400', 'dark:border-yellow-700');
+
+                      // Add hand icon
+                      const handIcon = document.createElement('div');
+                      handIcon.className = 'absolute -top-4 left-1/2 transform -translate-x-1/2';
+                      handIcon.innerHTML = `<svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"></path>
+                </svg>`;
+                      seatElement.appendChild(handIcon);
+                  } else if (status === 'speaking') {
+                      seatContent.classList.add('bg-blue-100', 'dark:bg-blue-900/30', 'border-2', 'border-blue-400', 'dark:border-blue-700', 'animate-pulse');
+                  }
+
+                  // Update the seat's content with student info
+                  if (status === 'empty') {
+                      // Remove the student info
+                      seatContent.innerHTML = '<div class="text-xs text-gray-500 dark:text-gray-400">Empty Seat</div>';
+
+                      // Remove laptop button if exists
+                      const laptopBtn = seatElement.querySelector('.laptop-btn');
+                      if (laptopBtn) {
+                          laptopBtn.remove();
+                      }
+                  } else if (student && student.username) {
+                      // Update with student info
+                      updateSeatStudent(seatElement, student);
+                  }
+
+                  // Update student list for chat recipients
+                  setTimeout(updateStudentList, 0); // Use setTimeout to avoid potential circular dependencies
+              } catch (error) {
+                  console.error('Error in updateSeatStatus:', error);
+              }
+          }
+
+          function updateSeatStudent(seatElement, student) {
+              try {
+                  if (!seatElement) {
+                      console.warn('No seat element provided to updateSeatStudent');
+                      return;
+                  }
+
+                  if (!student || typeof student !== 'object') {
+                      console.warn('Invalid student data provided to updateSeatStudent');
+                      return;
+                  }
+
+                  const username = student.username || 'Unknown';
+
+                  const seatContent = seatElement.querySelector('.w-full.h-full');
+                  if (!seatContent) {
+                      console.warn('Seat content element not found in updateSeatStudent');
+                      return;
+                  }
+
+                  // Create the student avatar and name elements
+                  seatContent.innerHTML = `
+                <div class="text-center">
+                    <div class="avatar w-8 h-8 mx-auto bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center text-gray-700 dark:text-gray-300 font-bold">
+                        ${(username.charAt(0) || '?').toUpperCase()}
+                    </div>
+                    <div class="text-xs mt-1 font-medium truncate">${username}</div>
+                </div>
+            `;
+
+                  // Remove existing laptop button to prevent duplicates
+                  const existingLaptopBtn = seatElement.querySelector('.laptop-btn');
+                  if (existingLaptopBtn) {
+                      existingLaptopBtn.remove();
+                  }
+
+                  // Add the laptop button
+                  const laptopBtn = document.createElement('button');
+                  laptopBtn.className = 'absolute bottom-0 right-0 bg-white dark:bg-gray-600 rounded-full p-1 shadow-md laptop-btn';
+                  laptopBtn.dataset.seatId = seatElement.dataset.id;
+                  laptopBtn.dataset.username = username; // Store username to avoid DOM queries later
+                  laptopBtn.innerHTML = `<svg class="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+            </svg>`;
+
+                  seatElement.appendChild(laptopBtn);
+
+                  // Use a single event handler for all laptop buttons via event delegation
+                  // Remove this individual handler and use the global one below
+                  laptopBtn.addEventListener('click', handleLaptopButtonClick);
+              } catch (error) {
+                  console.error('Error in updateSeatStudent:', error);
+              }
+          }
+
+          // Global event handler for laptop buttons to prevent duplicates
+          function handleLaptopButtonClick(event) {
+              try {
+                  const laptopBtn = event.currentTarget;
+                  const seatId = laptopBtn.dataset.seatId;
+                  const username = laptopBtn.dataset.username;
+
+                  if (!seatId) {
+                      console.warn('No seat ID found on laptop button');
+                      return;
+                  }
+
+                  const laptopModal = document.getElementById('laptopModal');
+                  const laptopModalTitle = document.getElementById('laptopModalTitle');
+
+                  if (!laptopModal || !laptopModalTitle) {
+                      console.warn('Laptop modal elements not found');
+                      return;
+                  }
+
+                  currentSeatId = seatId;
+                  laptopModalTitle.textContent = `${username || 'Student'}'s Laptop`;
+                  laptopModal.classList.remove('hidden');
+
+                  // Make elements readonly if not the current user
+                  const isCurrentUser = username === currentUsername;
+
+                  try {
+                      if (codeEditor) {
+                          codeEditor.setReadOnly(!isCurrentUser);
+                      }
+                  } catch (editorError) {
+                      console.error('Error configuring code editor:', editorError);
+                  }
+
+                  const studentNotes = document.getElementById('studentNotes');
+                  const chatInput = document.getElementById('chatInput');
+                  const sendChatBtn = document.getElementById('sendChatBtn');
+
+                  if (studentNotes) studentNotes.readOnly = !isCurrentUser;
+                  if (chatInput) chatInput.disabled = !isCurrentUser;
+                  if (sendChatBtn) sendChatBtn.disabled = !isCurrentUser;
+              } catch (error) {
+                  console.error('Error in handleLaptopButtonClick:', error);
+              }
+          }
+
+          // Add global event delegation for laptop buttons
+          document.addEventListener('click', function(event) {
+              const laptopBtn = event.target.closest('.laptop-btn');
+              if (laptopBtn) {
+                  handleLaptopButtonClick({
+                      currentTarget: laptopBtn
+                  });
+              }
+          });
+
+          function handleHandRaise(seatId, raised, studentName) {
+              const seatElement = document.querySelector(`.seat[data-id="${seatId}"]`);
+              if (!seatElement) return;
+
+              if (raised) {
+                  seatElement.dataset.status = 'hand_raised';
+
+                  // Add hand raise icon if not present
+                  if (!seatElement.querySelector('.absolute.-top-4')) {
+                      const handIcon = document.createElement('div');
+                      handIcon.className = 'absolute -top-4 left-1/2 transform -translate-x-1/2';
+                      handIcon.innerHTML = `<svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"></path>
+                </svg>`;
+                      seatElement.appendChild(handIcon);
+                  }
+
+                  // Update visual style
+                  const seatContent = seatElement.querySelector('.w-full.h-full');
+                  seatContent.classList.remove('bg-green-100', 'dark:bg-green-900/30', 'border-green-300', 'dark:border-green-700');
+                  seatContent.classList.add('bg-yellow-100', 'dark:bg-yellow-900/30', 'border-2', 'border-yellow-400', 'dark:border-yellow-700');
+
+                  // Update hand raise queue for teachers
+                  if (isTeacher) {
+                      fetchRaisedHandsQueue();
+                  }
+              } else {
+                  seatElement.dataset.status = 'occupied';
+
+                  // Remove hand raise icon
+                  const handIcon = seatElement.querySelector('.absolute.-top-4');
+                  if (handIcon) {
+                      handIcon.remove();
+                  }
+
+                  // Update visual style
+                  const seatContent = seatElement.querySelector('.w-full.h-full');
+                  seatContent.classList.remove('bg-yellow-100', 'dark:bg-yellow-900/30', 'border-yellow-400', 'dark:border-yellow-700');
+                  seatContent.classList.add('bg-green-100', 'dark:bg-green-900/30', 'border-2', 'border-green-300', 'dark:border-green-700');
+
+                  // Update hand raise queue for teachers
+                  if (isTeacher) {
+                      fetchRaisedHandsQueue();
+                  }
+              }
+
+              // Update raise hand button text if this is the current user
+              if (studentName === currentUsername) {
+                  const raiseHandBtn = document.getElementById('raiseHandBtn');
+                  if (raiseHandBtn) {
+                      raiseHandBtn.textContent = raised ? 'Lower Hand' : 'Raise Hand';
+                  }
+              }
+          }
+
+          function handleSpeakingUpdate(seatId, isSpeaking, studentName) {
+              const seatElement = document.querySelector(`.seat[data-id="${seatId}"]`);
+              if (!seatElement) return;
+
+              if (isSpeaking) {
+                  seatElement.dataset.status = 'speaking';
+
+                  // Update visual style
+                  const seatContent = seatElement.querySelector('.w-full.h-full');
+                  seatContent.classList.remove('bg-green-100', 'dark:bg-green-900/30', 'border-green-300', 'dark:border-green-700',
+                      'bg-yellow-100', 'dark:bg-yellow-900/30', 'border-yellow-400', 'dark:border-yellow-700');
+                  seatContent.classList.add('bg-blue-100', 'dark:bg-blue-900/30', 'border-2', 'border-blue-400', 'dark:border-blue-700', 'animate-pulse');
+
+                  // Remove hand icon if present
+                  const handIcon = seatElement.querySelector('.absolute.-top-4');
+                  if (handIcon) {
+                      handIcon.remove();
+                  }
+              } else {
+                  seatElement.dataset.status = 'occupied';
+
+                  // Update visual style
+                  const seatContent = seatElement.querySelector('.w-full.h-full');
+                  seatContent.classList.remove('bg-blue-100', 'dark:bg-blue-900/30', 'border-blue-400', 'dark:border-blue-700', 'animate-pulse');
+                  seatContent.classList.add('bg-green-100', 'dark:bg-green-900/30', 'border-2', 'border-green-300', 'dark:border-green-700');
+              }
+          }
+
+          function handleUpdateRound(roundId, action, currentStudent, remainingTime) {
+              try {
+                  switch (action) {
+                      case 'start':
+                          startUpdateRoundUI(remainingTime, roundId);
+                          break;
+                      case 'turn_change':
+                          updateCurrentSpeaker(currentStudent);
+                          break;
+                      case 'end':
+                          endUpdateRoundUI();
+                          break;
+                  }
+              } catch (error) {
+                  console.error('Error in handleUpdateRound:', error);
+              }
+          }
+
+          function handleContentShared(seatId, contentId, contentType, studentName) {
+              // Show notification
+              showNotification(`${studentName} shared ${contentType}`);
+
+              // Add to shared content list
+              addSharedContentToList(contentId, contentType, studentName);
+
+              // If this is code or notes, fetch and display it
+              if (contentType === 'code' || contentType === 'notes') {
+                  fetchSharedContent(contentId);
+              }
+          }
+
+          // Fetch shared content
+          function fetchSharedContent(contentId) {
+              fetch(`/classroom/content/${contentId}/`)
+                  .then(response => {
+                      if (!response.ok) {
+                          throw new Error('Failed to get content');
+                      }
+                      return response.json();
+                  })
+                  .then(data => {
+                      displaySharedContent(data);
+                  })
+                  .catch(error => {
+                      console.error('Error fetching content:', error);
+                  });
+          }
+
+          // Display shared content
+          function displaySharedContent(data) {
+              try {
+                  // Ensure modal exists
+                  ensureSharedContentModalExists();
+
+                  // Show modal
+                  const contentModal = document.getElementById('sharedContentModal');
+                  if (!contentModal) {
+                      console.error('Shared content modal not found and could not be created');
+                      return;
+                  }
+
+                  // Set modal title
+                  const contentTitle = contentModal.querySelector('.modal-title');
+                  if (contentTitle) {
+                      contentTitle.textContent = `Shared ${data.content_type || 'Content'}`;
+                  }
+
+                  // Set content based on type
+                  const contentBody = contentModal.querySelector('.modal-body');
+                  if (!contentBody) {
+                      console.error('Modal body not found');
+                      return;
+                  }
+
+                  if (!data.content_type) {
+                      contentBody.innerHTML = '<div class="text-red-500">Invalid content data</div>';
+                      contentModal.classList.remove('hidden');
+                      return;
+                  }
+
+                  if (data.content_type === 'code') {
+                      const codeData = data.content || {
+                          language: 'text',
+                          code: ''
+                      };
+                      contentBody.innerHTML = `
+                    <div class="mb-2">
+                        <span class="text-sm font-medium">Language: ${escapeHtml(codeData.language || 'text')}</span>
+                    </div>
+                    <pre class="language-${codeData.language || 'text'} bg-gray-100 dark:bg-gray-800 p-4 rounded overflow-x-auto"><code>${escapeHtml(codeData.code || '')}</code></pre>
+                `;
+
+                      // Apply syntax highlighting if available
+                      if (window.hljs) {
+                          contentBody.querySelectorAll('pre code').forEach((block) => {
+                              hljs.highlightBlock(block);
+                          });
+                      }
+                  } else if (data.content_type === 'notes') {
+                      contentBody.innerHTML = `
+                    <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded whitespace-pre-wrap">${escapeHtml(data.content?.notes || '')}</div>
+                `;
+                  } else if (data.content_type === 'document') {
+                      contentBody.innerHTML = `
+                    <div class="text-center">
+                        <a href="${escapeHtml(data.content?.file || '#')}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" target="_blank">
+                            Open Document
+                        </a>
+                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">${escapeHtml(data.content?.description || '')}</p>
+                    </div>
+                `;
+                  } else if (data.content_type === 'link') {
+                      contentBody.innerHTML = `
+                    <div class="text-center">
+                        <a href="${escapeHtml(data.content?.link || '#')}" class="text-blue-500 hover:underline" target="_blank">
+                            ${escapeHtml(data.content?.link || 'Link')}
+                        </a>
+                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">${escapeHtml(data.content?.description || '')}</p>
+                    </div>
+                `;
+                  } else {
+                      contentBody.innerHTML = `<div class="text-center">Unknown content type: ${escapeHtml(data.content_type)}</div>`;
+                  }
+
+                  // Show the modal
+                  contentModal.classList.remove('hidden');
+              } catch (error) {
+                  console.error('Error displaying shared content:', error);
+                  showNotification('Error displaying shared content', true);
+              }
+          }
+
+          // Add shared content to the list
+          function addSharedContentToList(contentId, contentType, studentName) {
+              const contentList = document.getElementById('sharedContentList');
+              if (!contentList) return;
+
+              const item = document.createElement('li');
+              item.className = 'p-2 bg-gray-100 dark:bg-gray-800 rounded mb-2 flex justify-between items-center';
+
+              const contentInfo = document.createElement('div');
+              contentInfo.textContent = `${studentName}: ${contentType}`;
+
+              const viewBtn = document.createElement('button');
+              viewBtn.className = 'bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 text-xs';
+              viewBtn.textContent = 'View';
+              viewBtn.addEventListener('click', function() {
+                  fetchSharedContent(contentId);
+              });
+
+              item.appendChild(contentInfo);
+              item.appendChild(viewBtn);
+
+              // Add to the top of the list
+              contentList.insertBefore(item, contentList.firstChild);
+          }
+
+          // Handle chat messages
+          function handleChatMessage(senderId, senderName, message, recipient) {
+              const chatMessages = document.getElementById('chatMessages');
+              if (!chatMessages) return;
+
+              // Create a message element
+              const messageDiv = document.createElement('div');
+              messageDiv.className = 'p-2 mb-2 rounded-lg';
+
+              // Style based on sender (self or other)
+              const isSelf = senderId === currentUserId;
+              if (isSelf) {
+                  messageDiv.className += ' bg-blue-50 dark:bg-blue-900/20 ml-8';
+              } else {
+                  messageDiv.className += ' bg-gray-50 dark:bg-gray-900/80 mr-8';
+              }
+
+              // Add recipient label for private messages
+              let recipientLabel = '';
+              if (recipient === 'teacher') {
+                  recipientLabel = '<span class="text-xs bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 px-1 py-0.5 rounded">To Teacher</span> ';
+              } else if (recipient === 'direct') {
+                  recipientLabel = '<span class="text-xs bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 px-1 py-0.5 rounded">Private</span> ';
+              }
+
+              // Format the message with escapeHtml to prevent XSS
+              messageDiv.innerHTML = `
+            <div class="flex items-start">
+                <div class="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-800 dark:text-gray-200 font-bold mr-2 flex-shrink-0">
+                    ${senderName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                    <div class="text-xs font-medium mb-1">${senderName} ${recipientLabel}</div>
+                    <div class="text-sm">${escapeHtml(message)}</div>
+                </div>
+            </div>
+        `;
+
+              // Add to chat
+              chatMessages.appendChild(messageDiv);
+
+              // Scroll to bottom
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+          }
+
+          // Helper function to escape HTML to prevent XSS
+          function escapeHtml(unsafe) {
+              return unsafe
+                  .replace(/&/g, "&amp;")
+                  .replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                  .replace(/"/g, "&quot;")
+                  .replace(/'/g, "&#039;");
+          }
+
+          // Helper function to update chat recipient dropdown with students
+          function updateStudentList() {
+              const recipientSelect = document.getElementById('chatRecipient');
+              if (!recipientSelect) return;
+
+              // Clear existing student options
+              const teacherOption = recipientSelect.querySelector('option[value="teacher"]');
+              const everyoneOption = recipientSelect.querySelector('option[value="everyone"]');
+
+              while (recipientSelect.options.length > 0) {
+                  recipientSelect.remove(0);
+              }
+
+              // Re-add default options
+              recipientSelect.add(new Option('Everyone', 'everyone'));
+              if (!isTeacher) { // Only add teacher option for students
+                  recipientSelect.add(new Option('Teacher Only', 'teacher'));
+              }
+
+              // Add student options
+              document.querySelectorAll('.seat[data-status="occupied"], .seat[data-status="hand_raised"], .seat[data-status="speaking"]').forEach(seat => {
+                  const studentName = seat.querySelector('.text-xs.mt-1')?.textContent.trim();
+
+                  if (studentName && studentName !== currentUsername) {
+                      recipientSelect.add(new Option(studentName, studentName));
+                  }
+              });
+          }
+
+          // Safely handle WebSocket connection status checks
+          function isWebSocketConnected() {
+              try {
+                  return socket && socket.readyState === WebSocket.OPEN;
+              } catch (error) {
+                  console.error('Error checking WebSocket connection status:', error);
+                  return false;
+              }
+          }
+
+          // Function to safely attempt reconnection
+          function attemptReconnection() {
+              try {
+                  if (socket && socket.readyState === WebSocket.CLOSED && reconnectAttempts < maxReconnectAttempts) {
+                      showNotification('Attempting to reconnect...', false, 'warning');
+                      connectWebSocket();
+                  }
+              } catch (error) {
+                  console.error('Error during reconnection attempt:', error);
+              }
+          }
+
+          // Set up a periodic connection check
+          setInterval(attemptReconnection, 10000); // Check every 10 seconds
+
+          // Make sure all API endpoints follow the same formatting convention (hyphens vs underscores)
+          document.querySelectorAll('a[href*="_"], form[action*="_"], button[data-url*="_"]').forEach(element => {
+              if (element.href) {
+                  element.href = element.href.replace(/_/g, '-');
+              }
+              if (element.action) {
+                  element.action = element.action.replace(/_/g, '-');
+              }
+              if (element.dataset.url) {
+                  element.dataset.url = element.dataset.url.replace(/_/g, '-');
+              }
+          });
+
+          // Centralized timer management
+          const timerManager = {
+              activeTimers: {},
+
+              // Start a timer with a name
+              startTimer: function(name, durationSeconds) {
+                  // Clear existing timer if any
+                  this.clearTimer(name);
+
+                  const duration = durationSeconds;
+                  const progressElement = document.getElementById(`${name}Progress`) || document.getElementById('timerProgress');
+                  const timeElement = document.getElementById(`${name}Time`) || document.getElementById('remainingTime');
+
+                  if (!progressElement || !timeElement) {
+                      console.error(`Timer elements not found for ${name}`);
+                      return;
+                  }
+
+                  let timer = duration;
+
+                  const updateTimerUI = () => {
+                      const minutes = Math.floor(timer / 60);
+                      const seconds = timer % 60;
+
+                      timeElement.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+                      const percentage = (timer / duration) * 100;
+                      progressElement.style.width = `${percentage}%`;
+
+                      if (timer <= 0) {
+                          this.clearTimer(name);
+                          // Change color to indicate time is up
+                          progressElement.classList.remove('bg-purple-600');
+                          progressElement.classList.add('bg-red-600');
+                          showNotification(`${name} time has ended`, false, 'warning');
+                      } else {
+                          timer--;
+                      }
+                  };
+
+                  // Initial update
+                  updateTimerUI();
+
+                  // Set interval
+                  this.activeTimers[name] = setInterval(updateTimerUI, 1000);
+
+                  return this.activeTimers[name];
+              },
+
+              // Clear a timer by name
+              clearTimer: function(name) {
+                  if (this.activeTimers[name]) {
+                      clearInterval(this.activeTimers[name]);
+                      delete this.activeTimers[name];
+                  }
+              },
+
+              // Clear all timers
+              clearAllTimers: function() {
+                  for (const name in this.activeTimers) {
+                      clearInterval(this.activeTimers[name]);
+                  }
+                  this.activeTimers = {};
+              }
+          };
+
+          // Add the missing UI update functions
+          function startUpdateRoundUI(remainingTime, roundId) {
+              try {
+                  // Create update round container if it doesn't exist
+                  let container = document.getElementById('updateRoundContainer');
+                  if (!container) {
+                      container = document.createElement('div');
+                      container.id = 'updateRoundContainer';
+                      container.className = 'mt-4 bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 border-l-4 border-purple-500';
+                      container.innerHTML = `
+                    <h3 class="text-lg font-bold mb-2">Update Round</h3>
+                    <div class="flex items-center mb-3">
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                            <div id="timerProgress" class="bg-purple-600 h-2.5 rounded-full" style="width: 100%"></div>
+                        </div>
+                        <span id="remainingTime" class="ml-2 text-sm font-medium">2:00</span>
+                    </div>
+                    <div id="currentSpeaker" class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-2 hidden">
+                        <p class="font-medium">Current speaker: <span class="font-bold" id="speakerName"></span></p>
+                        <button id="endTurnBtn" class="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm hidden">
+                            I'm Done
+                        </button>
+                    </div>
+                `;
+
+                      // Find where to insert the container
+                      const classroom = document.querySelector('.lg-col-span-2');
+                      if (classroom) {
+                          classroom.appendChild(container);
+                      } else {
+                          document.querySelector('.container.mx-auto').appendChild(container);
+                      }
+                  }
+
+                  // Reset timer
+                  if (remainingTime) {
+                      timerManager.startTimer('update', remainingTime);
+                  } else {
+                      timerManager.startTimer('update', 120); // Default 2 minutes
+                  }
+
+                  // Show notification
+                  showNotification('Update round started', false, 'success');
+              } catch (error) {
+                  console.error('Error in startUpdateRoundUI:', error);
+              }
+          }
+
+          function updateCurrentSpeaker(student) {
+              try {
+                  if (!student || !student.username) {
+                      console.warn('Invalid student data for current speaker');
+                      return;
+                  }
+
+                  const currentSpeaker = document.getElementById('currentSpeaker');
+                  const speakerName = document.getElementById('speakerName');
+                  const endTurnBtn = document.getElementById('endTurnBtn');
+
+                  if (!currentSpeaker || !speakerName) {
+                      console.warn('Current speaker elements not found');
+                      return;
+                  }
+
+                  // Update speaker name and show the container
+                  speakerName.textContent = student.username;
+                  currentSpeaker.classList.remove('hidden');
+
+                  // Show or hide the end turn button based on if this is the current user
+                  if (endTurnBtn) {
+                      if (student.username === currentUsername || isTeacher) {
+                          endTurnBtn.classList.remove('hidden');
+                          endTurnBtn.textContent = student.username === currentUsername ? "I'm Done" : "Next Student";
+
+                          // Update the button's data attribute
+                          if (student.turn_id) {
+                              endTurnBtn.dataset.turnId = student.turn_id;
+                          }
+                      } else {
+                          endTurnBtn.classList.add('hidden');
+                      }
+
+                      // Make sure the end turn button has its event listener
+                      endTurnBtn.removeEventListener('click', handleEndTurnClick);
+                      endTurnBtn.addEventListener('click', handleEndTurnClick);
+                  }
+
+                  // Show notification
+                  showNotification(`${student.username} is now speaking`, false);
+              } catch (error) {
+                  console.error('Error in updateCurrentSpeaker:', error);
+              }
+          }
+
+          function handleEndTurnClick() {
+              try {
+                  const turnId = this.dataset.turnId;
+                  if (!turnId) {
+                      console.warn('No turn ID found for end turn button');
+                      return;
+                  }
+
+                  fetch(`/classroom/end-turn/${turnId}/`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-CSRFToken': getCSRFToken()
+                          }
+                      })
+                      .then(response => {
+                          if (!response.ok) {
+                              throw new Error('Failed to end turn');
+                          }
+                          return response.json();
+                      })
+                      .then(data => {
+                          console.log('Turn ended:', data);
+                      })
+                      .catch(error => {
+                          console.error('Error ending turn:', error);
+                          showNotification('Failed to end turn', true);
+                      });
+              } catch (error) {
+                  console.error('Error in handleEndTurnClick:', error);
+              }
+          }
+
+          function endUpdateRoundUI() {
+              try {
+                  // Clear timer
+                  timerManager.clearTimer('update');
+
+                  // Hide or remove the update round container
+                  const container = document.getElementById('updateRoundContainer');
+                  if (container) {
+                      container.classList.add('hidden');
+                  }
+
+                  // Show notification
+                  showNotification('Update round has ended', false, 'warning');
+              } catch (error) {
+                  console.error('Error in endUpdateRoundUI:', error);
+              }
+          }
+
+          // Add shared content modal if not in the HTML
+          function ensureSharedContentModalExists() {
+              // Check if modal already exists
+              if (document.getElementById('sharedContentModal')) {
+                  return;
+              }
+
+              // Create the modal element
+              const modal = document.createElement('div');
+              modal.id = 'sharedContentModal';
+              modal.className = 'fixed inset-0 z-50 hidden';
+              modal.innerHTML = `
+            <div class="fixed inset-0 bg-black bg-opacity-50"></div>
+            <div class="fixed inset-10 bg-white dark:bg-gray-800 rounded-lg shadow-xl flex flex-col overflow-hidden">
+                <div class="p-4 border-b dark:border-gray-700 flex justify-between items-center">
+                    <h3 class="text-xl font-bold modal-title">Shared Content</h3>
+                    <button class="close-modal p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-auto p-4 modal-body">
+                    Content will be displayed here
+                </div>
+            </div>
+        `;
+
+              document.body.appendChild(modal);
+
+              // Add event listener for close button
+              const closeBtn = modal.querySelector('.close-modal');
+              if (closeBtn) {
+                  closeBtn.addEventListener('click', function() {
+                      modal.classList.add('hidden');
+                  });
+              }
+          }
+      });
+  </script>
+{% endblock %}

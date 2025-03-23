@@ -2237,3 +2237,118 @@ class NotificationPreference(models.Model):
 
     def __str__(self):
         return f"Notification preferences for {self.user.username}"
+
+
+class VirtualClassroom(models.Model):
+    """Virtual classroom environment linked to a session."""
+
+    session = models.OneToOneField(Session, on_delete=models.CASCADE, related_name="virtual_classroom")
+    rows = models.PositiveSmallIntegerField(default=5)
+    columns = models.PositiveSmallIntegerField(default=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Virtual Classroom for {self.session.title}"
+
+    def get_absolute_url(self):
+        return reverse("virtual_classroom_detail", args=[self.session.id])
+
+
+class VirtualSeat(models.Model):
+    """A seat in the virtual classroom."""
+
+    classroom = models.ForeignKey(VirtualClassroom, on_delete=models.CASCADE, related_name="seats")
+    row = models.PositiveSmallIntegerField()
+    column = models.PositiveSmallIntegerField()
+    student = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="virtual_seats")
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("empty", "Empty"),
+            ("occupied", "Occupied"),
+            ("speaking", "Speaking"),
+            ("hand_raised", "Hand Raised"),
+        ],
+        default="empty",
+    )
+    assigned_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ["classroom", "row", "column"]
+        ordering = ["row", "column"]
+
+    def __str__(self):
+        return f"Seat ({self.row}, {self.column}) in {self.classroom}"
+
+
+class HandRaise(models.Model):
+    """Track hand raises in the virtual classroom."""
+
+    seat = models.ForeignKey(VirtualSeat, on_delete=models.CASCADE, related_name="hand_raises")
+    raised_at = models.DateTimeField(auto_now_add=True)
+    lowered_at = models.DateTimeField(null=True, blank=True)
+    acknowledged = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["raised_at"]
+
+    def __str__(self):
+        return f"Hand raise by {self.seat.student.username if self.seat.student else 'unknown'}"
+
+    @property
+    def is_active(self):
+        return self.lowered_at is None
+
+
+class SharedContent(models.Model):
+    """Content shared by students during the virtual classroom."""
+
+    TYPE_CHOICES = [
+        ("screenshot", "Screenshot"),
+        ("document", "Document"),
+        ("link", "Link"),
+    ]
+
+    seat = models.ForeignKey(VirtualSeat, on_delete=models.CASCADE, related_name="shared_content")
+    content_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    file = models.FileField(upload_to="virtual_classroom/shared/", blank=True, default="")
+    link = models.URLField(blank=True)
+    description = models.TextField(blank=True)
+    shared_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-shared_at"]
+
+    def __str__(self):
+        return f"{self.content_type} shared by {self.seat.student.username if self.seat.student else 'unknown'}"
+
+
+class UpdateRound(models.Model):
+    """Tracks timed update rounds in the classroom."""
+
+    classroom = models.ForeignKey(VirtualClassroom, on_delete=models.CASCADE, related_name="update_rounds")
+    duration_seconds = models.PositiveSmallIntegerField(default=120)  # 2 minutes default
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"Update round for {self.classroom} started at {self.started_at}"
+
+
+class UpdateTurn(models.Model):
+    """Individual turns within an update round."""
+
+    update_round = models.ForeignKey(UpdateRound, on_delete=models.CASCADE, related_name="turns")
+    seat = models.ForeignKey(VirtualSeat, on_delete=models.CASCADE, related_name="update_turns")
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["started_at"]
+
+    def __str__(self):
+        return f"Turn for {self.seat.student.username if self.seat.student else 'unknown'}"
