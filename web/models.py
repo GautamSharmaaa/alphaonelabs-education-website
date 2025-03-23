@@ -2206,7 +2206,6 @@ class PeerChallengeInvitation(models.Model):
         )
 
 
-
 class FeatureVote(models.Model):
     """Store votes on platform features."""
 
@@ -2227,7 +2226,8 @@ class FeatureVote(models.Model):
     def __str__(self):
         user_identifier = self.user.username if self.user else f"IP: {self.ip_address}"
         return f"{user_identifier} - {self.get_vote_display()} for {self.feature_id}"
-      
+
+
 class NotificationPreference(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="notification_preferences")
     reminder_days_before = models.IntegerField(default=3, help_text="Days before deadline to send first reminder")
@@ -2237,4 +2237,3 @@ class NotificationPreference(models.Model):
 
     def __str__(self):
         return f"Notification preferences for {self.user.username}"
-

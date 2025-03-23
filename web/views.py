@@ -4700,7 +4700,6 @@ def run_create_test_data(request):
     return redirect("index")
 
 
-
 def features(request):
     """View for the features showcase page."""
     return render(request, "features.html")
@@ -4776,6 +4775,7 @@ def feature_vote(request):
     # Handle other request methods
     return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
+
 @login_required
 def notification_preferences(request):
     """
@@ -4797,4 +4797,3 @@ def notification_preferences(request):
         form = NotificationPreferencesForm(instance=preference)
 
     return render(request, "account/notification_preferences.html", {"form": form})
-
