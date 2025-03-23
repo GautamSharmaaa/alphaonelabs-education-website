@@ -4704,47 +4704,71 @@ def features(request):
 
 
 @csrf_protect
-@require_POST
 def feature_vote(request):
-    """Record votes on platform features."""
-    feature_id = request.POST.get("feature_id")
-    vote_type = request.POST.get("vote")
+    """Record votes on platform features or retrieve vote counts."""
+    # Handle GET requests to retrieve vote counts
+    if request.method == "GET":
+        feature_id = request.GET.get("feature_id")
+        if not feature_id:
+            return JsonResponse({"status": "error", "message": "Feature ID is required"}, status=400)
 
-    if not feature_id or vote_type not in ["up", "down"]:
-        return JsonResponse({"status": "error", "message": "Invalid parameters"}, status=400)
+        # Get vote counts
+        up_count = FeatureVote.objects.filter(feature_id=feature_id, vote="up").count()
+        down_count = FeatureVote.objects.filter(feature_id=feature_id, vote="down").count()
 
-    # Store IP for anonymous users
-    ip_address = None
-    if not request.user.is_authenticated:
-        ip_address = request.META.get("REMOTE_ADDR")
+        return JsonResponse(
+            {"status": "success", "feature_id": feature_id, "up_count": up_count, "down_count": down_count}
+        )
 
-    # Check for existing vote
-    existing_vote = None
-    if request.user.is_authenticated:
-        existing_vote = FeatureVote.objects.filter(feature_id=feature_id, user=request.user).first()
-    elif ip_address:
-        existing_vote = FeatureVote.objects.filter(feature_id=feature_id, ip_address=ip_address).first()
+    # Handle POST requests for voting
+    elif request.method == "POST":
+        feature_id = request.POST.get("feature_id")
+        vote_type = request.POST.get("vote")
 
-    if existing_vote:
-        if existing_vote.vote != vote_type:
-            existing_vote.vote = vote_type
-            existing_vote.save()
-        return JsonResponse({"status": "success", "message": "Vote updated"})
+        if not feature_id or vote_type not in ["up", "down"]:
+            return JsonResponse({"status": "error", "message": "Invalid parameters"}, status=400)
 
-    # Create new vote
-    new_vote = FeatureVote(feature_id=feature_id, vote=vote_type)
+        # Store IP for anonymous users
+        ip_address = None
+        if not request.user.is_authenticated:
+            ip_address = request.META.get("REMOTE_ADDR")
 
-    if request.user.is_authenticated:
-        new_vote.user = request.user
-    else:
-        new_vote.ip_address = ip_address
+        # Check for existing vote
+        existing_vote = None
+        if request.user.is_authenticated:
+            existing_vote = FeatureVote.objects.filter(feature_id=feature_id, user=request.user).first()
+        elif ip_address:
+            existing_vote = FeatureVote.objects.filter(feature_id=feature_id, ip_address=ip_address).first()
 
-    new_vote.save()
+        if existing_vote:
+            if existing_vote.vote != vote_type:
+                existing_vote.vote = vote_type
+                existing_vote.save()
 
-    # Get updated counts
-    up_count = FeatureVote.objects.filter(feature_id=feature_id, vote="up").count()
-    down_count = FeatureVote.objects.filter(feature_id=feature_id, vote="down").count()
+            # Include vote counts in the response
+            up_count = FeatureVote.objects.filter(feature_id=feature_id, vote="up").count()
+            down_count = FeatureVote.objects.filter(feature_id=feature_id, vote="down").count()
+            return JsonResponse(
+                {"status": "success", "message": "Vote updated", "up_count": up_count, "down_count": down_count}
+            )
 
-    return JsonResponse(
-        {"status": "success", "message": "Vote recorded", "up_count": up_count, "down_count": down_count}
-    )
+        # Create new vote
+        new_vote = FeatureVote(feature_id=feature_id, vote=vote_type)
+
+        if request.user.is_authenticated:
+            new_vote.user = request.user
+        else:
+            new_vote.ip_address = ip_address
+
+        new_vote.save()
+
+        # Get updated counts
+        up_count = FeatureVote.objects.filter(feature_id=feature_id, vote="up").count()
+        down_count = FeatureVote.objects.filter(feature_id=feature_id, vote="down").count()
+
+        return JsonResponse(
+            {"status": "success", "message": "Vote recorded", "up_count": up_count, "down_count": down_count}
+        )
+
+    # Handle other request methods
+    return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)

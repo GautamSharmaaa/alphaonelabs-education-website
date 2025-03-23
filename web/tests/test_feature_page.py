@@ -57,13 +57,13 @@ class FeaturesPageTest(TestCase):
 
         # Check for title and intro text
         self.assertContains(response, "Platform Features")
-        self.assertContains(response, "Alpha One Labs provides")
+        self.assertContains(response, "Discover the tools and capabilities")
 
         # Check that the feature card has the expected structure
-        self.assertContains(response, '<div class="feature-card">')
-        self.assertContains(response, '<div class="feature-header">')
-        self.assertContains(response, '<div class="feature-content">')
-        self.assertContains(response, '<div class="feature-actions">')
+        self.assertContains(response, 'data-category="new popular"')
+        self.assertContains(response, "feature-status new")
+        self.assertContains(response, "feature-header")
+        self.assertContains(response, "feature-content")
 
     def test_vote_counts_display(self):
         """Test that vote counts display correctly on the features page."""
@@ -88,10 +88,16 @@ class FeaturesPageTest(TestCase):
         # the page is viewed in a browser. We could modify the view to pre-load these counts
         # if needed for a future enhancement.
 
-    def test_feature_vote_requires_post(self):
-        """Test that feature voting requires a POST request."""
+    def test_feature_vote_get_requires_feature_id(self):
+        """Test that GET requests to feature_vote require a feature_id parameter."""
+        # GET request without feature_id should return 400
         response = self.client.get(self.vote_url)
-        self.assertEqual(response.status_code, 405)  # Method not allowed
+        self.assertEqual(response.status_code, 400)
+
+        # GET request with feature_id should return 200
+        response = self.client.get(f"{self.vote_url}?feature_id=grade-link")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("up_count", response.json())
 
     def test_feature_vote_requires_parameters(self):
         """Test that feature voting requires correct parameters."""

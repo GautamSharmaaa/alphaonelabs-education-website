@@ -4,21 +4,37 @@
 
 {% block title %}Features - Alpha One Labs{% endblock %}
 {% block content %}
-  <div class="container py-8 max-w-7xl mx-auto px-4 sm:px-6">
-    <div class="mb-10">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Platform Features</h1>
-      <p class="text-gray-600 dark:text-gray-300 max-w-3xl">
-        Alpha One Labs provides a variety of features designed to enhance the learning and teaching experience.
-        Explore our growing collection of tools and capabilities created to support your educational journey.
+  <div class="container py-12 max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-extrabold text-gray-900 dark:text-white mb-4 tracking-tight">Our Platform Features</h1>
+      <p class="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+        Discover the tools and capabilities we've built to enhance your educational journey.
+        <span class="hidden sm:inline">Vote on features you love or want to see improved.</span>
       </p>
     </div>
+    <!-- Feature Categories Navigation -->
+    <div class="flex justify-center mb-10 overflow-x-auto pb-2 hide-scrollbar">
+      <div class="inline-flex space-x-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+        <button class="category-btn active px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
+                data-category="all">All Features</button>
+        <button class="category-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
+                data-category="new">New</button>
+        <button class="category-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
+                data-category="popular">Most Popular</button>
+        <button class="category-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
+                data-category="coming-soon">Coming Soon</button>
+      </div>
+    </div>
     <!-- Features Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+         id="features-grid">
       <!-- Get a Grade Feature Card -->
-      <div class="feature-card">
+      <div class="feature-card" data-category="new popular">
+        <div class="feature-status new">New</div>
         <div class="feature-header">
           <h3>Get a Grade</h3>
-          <span class="feature-author">by <a href="https://github.com/GautamSharmaaa">@GautamSharmaaa</a></span>
+          <span class="feature-author">by <a href="https://github.com/GautamSharmaaa"
+    aria-label="View GautamSharmaaa's GitHub profile">@GautamSharmaaa</a></span>
         </div>
         <div class="feature-content">
           <p>Submit links to your projects, articles, or educational content for peer grading and feedback.</p>
@@ -30,51 +46,168 @@
           <div class="feature-actions">
             <a href="{% url 'gradeable_link_list' %}" class="btn btn-primary">Try it out</a>
             <div class="feature-feedback">
-              <button class="thumbs-up" data-feature-id="grade-link">
+              <button class="thumbs-up" data-feature-id="grade-link" aria-label="Vote up">
                 <i class="fa fa-thumbs-up"></i> <span class="count">0</span>
               </button>
-              <button class="thumbs-down" data-feature-id="grade-link">
+              <button class="thumbs-down"
+                      data-feature-id="grade-link"
+                      aria-label="Vote down">
                 <i class="fa fa-thumbs-down"></i> <span class="count">0</span>
               </button>
+              <div class="voting-message" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Practice Exercises Feature Card (Coming Soon) -->
+      <div class="feature-card" data-category="coming-soon">
+        <div class="feature-status coming-soon">Coming Soon</div>
+        <div class="feature-header">
+          <h3>Practice Exercises</h3>
+          <span class="feature-author">by <a href="#" aria-label="View Alpha One Labs team profile">@AlphaOneTeam</a></span>
+        </div>
+        <div class="feature-content">
+          <p>Interactive practice exercises to reinforce your learning with real-time feedback.</p>
+          <ul class="feature-highlights">
+            <li>Progress tracking and skill assessment</li>
+            <li>Difficulty levels from beginner to expert</li>
+            <li>Customized exercise recommendations</li>
+          </ul>
+          <div class="feature-actions">
+            <a href="#" class="btn btn-secondary">Notify me</a>
+            <div class="feature-feedback">
+              <button class="thumbs-up"
+                      data-feature-id="practice-exercises"
+                      aria-label="Vote up">
+                <i class="fa fa-thumbs-up"></i> <span class="count">0</span>
+              </button>
+              <button class="thumbs-down"
+                      data-feature-id="practice-exercises"
+                      aria-label="Vote down">
+                <i class="fa fa-thumbs-down"></i> <span class="count">0</span>
+              </button>
+              <div class="voting-message" aria-live="polite"></div>
             </div>
           </div>
         </div>
       </div>
       <!-- Add more feature cards here in the future -->
     </div>
+    <!-- No features found message -->
+    <div id="no-features-message" class="hidden text-center py-12">
+      <p class="text-gray-500 dark:text-gray-400 text-lg">No features found in this category.</p>
+    </div>
   </div>
   <!-- CSS for Features Page -->
   <style>
+      /* Hide scrollbar but keep functionality */
+      .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+      }
+
+      .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+      }
+
+      /* Category Navigation */
+      .category-btn {
+          color: #4a5568;
+          background: transparent;
+          border: none;
+          outline: none;
+          cursor: pointer;
+      }
+
+      .dark .category-btn {
+          color: #e2e8f0;
+      }
+
+      .category-btn.active {
+          color: white;
+          background-color: #ed8936;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .dark .category-btn.active {
+          background-color: #dd6b20;
+      }
+
       /* Feature Card Styles */
       .feature-card {
+          position: relative;
           border: 1px solid #e2e8f0;
-          border-radius: 0.5rem;
-          padding: 1.5rem;
+          border-radius: 0.75rem;
+          padding: 1.75rem;
           margin-bottom: 1.5rem;
-          transition: all 0.3s ease;
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           height: 100%;
           display: flex;
           flex-direction: column;
+          overflow: hidden;
+          animation: fadeIn 0.5s ease-out;
+      }
+
+      @keyframes fadeIn {
+          from {
+              opacity: 0;
+              transform: translateY(10px);
+          }
+
+          to {
+              opacity: 1;
+              transform: translateY(0);
+          }
       }
 
       .feature-card:hover {
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          transform: translateY(-2px);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+          transform: translateY(-5px);
+      }
+
+      /* Feature Status Badge */
+      .feature-status {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          z-index: 10;
+      }
+
+      .feature-status.new {
+          background-color: #ebf8ff;
+          color: #3182ce;
+      }
+
+      .feature-status.coming-soon {
+          background-color: #faf5ff;
+          color: #805ad5;
+      }
+
+      .dark .feature-status.new {
+          background-color: rgba(49, 130, 206, 0.2);
+      }
+
+      .dark .feature-status.coming-soon {
+          background-color: rgba(128, 90, 213, 0.2);
       }
 
       .feature-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 1rem;
-          padding-bottom: 1rem;
+          margin-bottom: 1.25rem;
+          padding-bottom: 1.25rem;
           border-bottom: 1px solid #e2e8f0;
       }
 
       .feature-header h3 {
-          font-size: 1.25rem;
-          font-weight: 600;
+          font-size: 1.5rem;
+          font-weight: 700;
           color: #1a202c;
       }
 
@@ -90,6 +223,7 @@
       .feature-author a {
           color: #3182ce;
           transition: color 0.2s;
+          text-decoration: none;
       }
 
       .feature-author a:hover {
@@ -114,6 +248,7 @@
       .feature-content p {
           margin-bottom: 1rem;
           color: #4a5568;
+          line-height: 1.6;
       }
 
       .dark .feature-content p {
@@ -127,8 +262,9 @@
       }
 
       .feature-highlights li {
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.75rem;
           color: #4a5568;
+          line-height: 1.4;
       }
 
       .dark .feature-highlights li {
@@ -144,11 +280,13 @@
       }
 
       .btn {
-          padding: 0.5rem 1rem;
-          border-radius: 0.375rem;
-          font-weight: 500;
+          padding: 0.625rem 1.25rem;
+          border-radius: 0.5rem;
+          font-weight: 600;
           text-align: center;
           transition: all 0.2s;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+          text-decoration: none;
       }
 
       .btn-primary {
@@ -158,34 +296,69 @@
 
       .btn-primary:hover {
           background-color: #dd6b20;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.12);
+      }
+
+      .btn-secondary {
+          background-color: transparent;
+          color: #ed8936;
+          border: 1px solid #ed8936;
+      }
+
+      .btn-secondary:hover {
+          background-color: rgba(237, 137, 54, 0.1);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.12);
+      }
+
+      .dark .btn-secondary {
+          color: #ed8936;
+          border-color: #ed8936;
       }
 
       .feature-feedback {
           display: flex;
+          align-items: center;
           gap: 0.75rem;
+          position: relative;
+          margin-bottom: 1.5rem;
+          min-height: 2.5rem;
+          /* Ensure minimum height for proper display */
+      }
+
+      /* Styling for vote count display */
+      .count {
+          display: inline-block;
+          min-width: 1rem;
+          /* Ensure minimum width to prevent layout shifts */
+          text-align: center;
       }
 
       .thumbs-up,
       .thumbs-down {
           background: none;
           border: 1px solid #e2e8f0;
-          padding: 0.5rem;
-          border-radius: 0.25rem;
+          padding: 0.625rem 0.75rem;
+          border-radius: 0.375rem;
           display: inline-flex;
           align-items: center;
-          gap: 0.25rem;
+          gap: 0.375rem;
           cursor: pointer;
           transition: all 0.2s ease;
+          font-size: 0.875rem;
       }
 
       .thumbs-up:hover {
           background-color: #f0fff4;
           border-color: #68d391;
+          transform: translateY(-2px);
       }
 
       .thumbs-down:hover {
           background-color: #fff5f5;
           border-color: #fc8181;
+          transform: translateY(-2px);
       }
 
       .thumbs-up.selected {
@@ -203,6 +376,74 @@
       .thumbs-up.voted:not(.selected),
       .thumbs-down.voted:not(.selected) {
           opacity: 0.5;
+      }
+
+      .thumbs-up.loading,
+      .thumbs-down.loading {
+          position: relative;
+          color: transparent;
+      }
+
+      .thumbs-up.loading::after,
+      .thumbs-down.loading::after {
+          content: "";
+          position: absolute;
+          width: 1rem;
+          height: 1rem;
+          top: calc(50% - 0.5rem);
+          left: calc(50% - 0.5rem);
+          border: 2px solid rgba(0, 0, 0, 0.2);
+          border-top-color: #ed8936;
+          border-radius: 50%;
+          animation: loading-spinner 0.6s linear infinite;
+      }
+
+      @keyframes loading-spinner {
+          to {
+              transform: rotate(360deg);
+          }
+      }
+
+      .voting-message {
+          position: absolute;
+          bottom: -24px;
+          left: 0;
+          width: 100%;
+          padding: 0.25rem 0;
+          font-size: 0.875rem;
+          font-weight: 500;
+          transition: all 0.3s ease;
+          opacity: 0;
+          pointer-events: none;
+          text-align: center;
+      }
+
+      .voting-message.success {
+          color: #2f855a;
+          background-color: rgba(240, 255, 244, 0.9);
+          border-radius: 4px;
+          padding: 0.375rem 0.5rem;
+          opacity: 1;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .voting-message.error {
+          color: #c53030;
+          background-color: rgba(255, 245, 245, 0.9);
+          border-radius: 4px;
+          padding: 0.375rem 0.5rem;
+          opacity: 1;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .dark .voting-message.success {
+          background-color: rgba(47, 133, 90, 0.2);
+          color: #9ae6b4;
+      }
+
+      .dark .voting-message.error {
+          background-color: rgba(197, 48, 48, 0.2);
+          color: #feb2b2;
       }
 
       .dark .feature-card {
@@ -227,8 +468,49 @@
       .dark .thumbs-down:hover {
           background-color: rgba(252, 129, 129, 0.1);
       }
+
+      /* Responsive adjustments */
+      @media (max-width: 640px) {
+          .feature-header {
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 0.5rem;
+          }
+
+          .feature-actions {
+              flex-direction: column;
+              gap: 1rem;
+              align-items: flex-start;
+          }
+
+          .feature-feedback {
+              width: 100%;
+              justify-content: flex-start;
+              margin-bottom: 2rem;
+          }
+
+          .voting-message {
+              bottom: -30px;
+              font-size: 0.8rem;
+          }
+      }
+
+      /* Animation for count updates */
+      .count {
+          transition: all 0.2s;
+      }
+
+      .count-updated {
+          transform: scale(1.5);
+          font-weight: bold;
+          color: #ed8936;
+      }
+
+      .dark .count-updated {
+          color: #f6ad55;
+      }
   </style>
-  <!-- JavaScript for thumbs up/down functionality -->
+  <!-- JavaScript for features page functionality -->
   <script>
       document.addEventListener('DOMContentLoaded', function() {
           // Get CSRF token
@@ -248,73 +530,193 @@
           }
           const csrfToken = getCookie('csrftoken');
 
-          // Thumbs up/down functionality
-          const thumbsButtons = document.querySelectorAll('.thumbs-up, .thumbs-down');
+          // Function to fetch initial vote counts
+          function fetchVoteCounts() {
+              // Get all feature IDs from the page
+              const featureIds = Array.from(document.querySelectorAll('[data-feature-id]'))
+                  .map(el => el.dataset.featureId)
+                  .filter((value, index, self) => self.indexOf(value) === index); // Unique values
 
-          thumbsButtons.forEach(button => {
-              button.addEventListener('click', async function() {
-                  const featureId = this.getAttribute('data-feature-id');
-                  const isUpvote = this.classList.contains('thumbs-up');
-                  const countElement = this.querySelector('.count');
-
-                  try {
-                      const formData = new FormData();
-                      formData.append('feature_id', featureId);
-                      formData.append('vote', isUpvote ? 'up' : 'down');
-
-                      const response = await fetch('{% url "feature_vote" %}', {
-                          method: 'POST',
-                          body: formData,
+              featureIds.forEach(featureId => {
+                  // Make a GET request to get vote counts
+                  fetch(`{% url "feature_vote" %}?feature_id=${featureId}`, {
+                          method: 'GET',
                           headers: {
                               'X-CSRFToken': csrfToken
                           }
+                      })
+                      .then(response => {
+                          if (response.ok) return response.json();
+                          throw new Error('Failed to fetch vote counts');
+                      })
+                      .then(data => {
+                          if (data.up_count !== undefined && data.down_count !== undefined) {
+                              const upCountElements = document.querySelectorAll(`.thumbs-up[data-feature-id="${featureId}"] .count`);
+                              const downCountElements = document.querySelectorAll(`.thumbs-down[data-feature-id="${featureId}"] .count`);
+
+                              upCountElements.forEach(el => {
+                                  el.textContent = data.up_count;
+                              });
+                              downCountElements.forEach(el => {
+                                  el.textContent = data.down_count;
+                              });
+
+                              console.log(`Initialized counts for ${featureId}: ${data.up_count} up, ${data.down_count} down`);
+                          }
+                      })
+                      .catch(error => {
+                          console.error('Error fetching vote counts:', error);
                       });
+              });
+          }
 
-                      if (!response.ok) throw new Error('Network response was not ok');
-                      const data = await response.json();
+          // Try to fetch initial vote counts, but don't block if fails
+          try {
+              fetchVoteCounts();
+          } catch (e) {
+              console.error('Could not fetch initial vote counts:', e);
+          }
 
-                      // Update the counts
-                      const upButton = this.closest('.feature-feedback').querySelector('.thumbs-up');
-                      const downButton = this.closest('.feature-feedback').querySelector('.thumbs-down');
+          // Category filtering
+          const categoryButtons = document.querySelectorAll('.category-btn');
+          const featuresGrid = document.getElementById('features-grid');
+          const featureCards = document.querySelectorAll('.feature-card');
+          const noFeaturesMessage = document.getElementById('no-features-message');
 
-                      if (upButton) upButton.querySelector('.count').textContent = data.up_count;
-                      if (downButton) downButton.querySelector('.count').textContent = data.down_count;
+          categoryButtons.forEach(button => {
+              button.addEventListener('click', function() {
+                  // Update active state
+                  categoryButtons.forEach(btn => btn.classList.remove('active'));
+                  this.classList.add('active');
 
-                      // Disable buttons and highlight selected
-                      const parentFeedback = this.closest('.feature-feedback');
-                      parentFeedback.querySelectorAll('button').forEach(btn => {
-                          btn.disabled = true;
-                          btn.classList.add('voted');
-                      });
+                  const category = this.dataset.category;
+                  let visibleCount = 0;
 
-                      this.classList.add('selected');
+                  // Filter features
+                  featureCards.forEach(card => {
+                      if (category === 'all' || card.dataset.category.includes(category)) {
+                          card.style.display = 'flex';
+                          visibleCount++;
+                      } else {
+                          card.style.display = 'none';
+                      }
+                  });
 
-                      // Store the vote in localStorage to persist the UI state
-                      localStorage.setItem(`feature_vote_${featureId}`, isUpvote ? 'up' : 'down');
-
-                  } catch (error) {
-                      console.error('Error voting on feature:', error);
+                  // Show/hide no features message
+                  if (visibleCount === 0) {
+                      noFeaturesMessage.classList.remove('hidden');
+                  } else {
+                      noFeaturesMessage.classList.add('hidden');
                   }
               });
           });
 
-          // Check for existing votes in localStorage and update UI
-          thumbsButtons.forEach(button => {
-              const featureId = button.getAttribute('data-feature-id');
-              const storedVote = localStorage.getItem(`feature_vote_${featureId}`);
+          // Voting functionality
+          const thumbButtons = document.querySelectorAll('.thumbs-up, .thumbs-down');
 
-              if (storedVote) {
-                  const parentFeedback = button.closest('.feature-feedback');
-                  parentFeedback.querySelectorAll('button').forEach(btn => {
-                      btn.disabled = true;
-                      btn.classList.add('voted');
-                  });
+          // Check for existing votes in localStorage
+          thumbButtons.forEach(button => {
+              const featureId = button.dataset.featureId;
+              const voteType = button.classList.contains('thumbs-up') ? 'up' : 'down';
+              const savedVote = localStorage.getItem(`feature_vote_${featureId}`);
 
-                  if ((storedVote === 'up' && button.classList.contains('thumbs-up')) ||
-                      (storedVote === 'down' && button.classList.contains('thumbs-down'))) {
-                      button.classList.add('selected');
-                  }
+              if (savedVote === voteType) {
+                  button.classList.add('selected');
+                  const siblingButton = button.classList.contains('thumbs-up') ?
+                      button.parentElement.querySelector('.thumbs-down') :
+                      button.parentElement.querySelector('.thumbs-up');
+                  siblingButton.classList.add('voted');
               }
+          });
+
+          thumbButtons.forEach(button => {
+              button.addEventListener('click', function() {
+                  const featureId = this.dataset.featureId;
+                  const voteType = this.classList.contains('thumbs-up') ? 'up' : 'down';
+                  const siblingButton = this.classList.contains('thumbs-up') ?
+                      this.parentElement.querySelector('.thumbs-down') :
+                      this.parentElement.querySelector('.thumbs-up');
+                  const messageElement = this.parentElement.querySelector('.voting-message');
+
+                  // Add loading state
+                  this.classList.add('loading');
+
+                  // Send vote to server
+                  fetch('{% url "feature_vote" %}', {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/x-www-form-urlencoded',
+                              'X-CSRFToken': csrfToken
+                          },
+                          body: `feature_id=${featureId}&vote=${voteType}`
+                      })
+                      .then(response => {
+                          // Remove loading state
+                          this.classList.remove('loading');
+
+                          if (!response.ok) {
+                              throw new Error('Voting failed');
+                          }
+                          return response.json();
+                      })
+                      .then(data => {
+                          console.log('Vote response:', data); // Debug log
+
+                          // Save vote to localStorage
+                          localStorage.setItem(`feature_vote_${featureId}`, voteType);
+
+                          // Update UI
+                          this.classList.add('selected');
+                          siblingButton.classList.remove('selected');
+                          siblingButton.classList.add('voted');
+
+                          // Ensure we get the correct count elements
+                          const upCount = this.parentElement.querySelector('.thumbs-up .count');
+                          const downCount = this.parentElement.querySelector('.thumbs-down .count');
+
+                          // Forcefully update the vote counts with the latest values and animate the change
+                          if (typeof data.up_count === 'number' || typeof data.up_count === 'string') {
+                              // Animate the counter change
+                              upCount.classList.add('count-updated');
+                              upCount.textContent = data.up_count;
+                              setTimeout(() => upCount.classList.remove('count-updated'), 1000);
+                              console.log(`Updated upvote count for ${featureId} to: ${data.up_count}`);
+                          }
+
+                          if (typeof data.down_count === 'number' || typeof data.down_count === 'string') {
+                              // Animate the counter change
+                              downCount.classList.add('count-updated');
+                              downCount.textContent = data.down_count;
+                              setTimeout(() => downCount.classList.remove('count-updated'), 1000);
+                              console.log(`Updated downvote count for ${featureId} to: ${data.down_count}`);
+                          }
+
+                          // Show success message
+                          messageElement.textContent = 'Thanks for your feedback!';
+                          messageElement.classList.add('success');
+                          messageElement.classList.remove('error');
+                          messageElement.style.opacity = 1;
+
+                          // Hide message after 5 seconds
+                          setTimeout(() => {
+                              messageElement.style.opacity = 0;
+                          }, 5000);
+                      })
+                      .catch(error => {
+                          console.error('Error:', error);
+
+                          // Show error message
+                          messageElement.textContent = 'Something went wrong. Please try again.';
+                          messageElement.classList.add('error');
+                          messageElement.classList.remove('success');
+                          messageElement.style.opacity = 1;
+
+                          // Hide message after 5 seconds
+                          setTimeout(() => {
+                              messageElement.style.opacity = 0;
+                          }, 5000);
+                      });
+              });
           });
       });
   </script>
