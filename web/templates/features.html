@@ -37,6 +37,21 @@
     aria-label="View GautamSharmaaa's GitHub profile">@GautamSharmaaa</a></span>
         </div>
         <div class="feature-content">
+          <!-- Feature Image -->
+          <div class="feature-image">
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 width="80"
+                 height="80"
+                 viewBox="0 0 24 24"
+                 fill="none"
+                 stroke="#ed8936"
+                 stroke-width="2"
+                 stroke-linecap="round"
+                 stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+          </div>
           <p>Submit links to your projects, articles, or educational content for peer grading and feedback.</p>
           <ul class="feature-highlights">
             <li>Academic grading scale (A to F)</li>
@@ -67,6 +82,12 @@
           <span class="feature-author">by <a href="#" aria-label="View Alpha One Labs team profile">@AlphaOneTeam</a></span>
         </div>
         <div class="feature-content">
+          <!-- Feature Image with default placeholder -->
+          <div class="feature-image">
+            <img src="https://placehold.co/238x224?text=Coming+Soon"
+                 alt="Practice Exercises feature illustration"
+                 class="feature-img" />
+          </div>
           <p>Interactive practice exercises to reinforce your learning with real-time feedback.</p>
           <ul class="feature-highlights">
             <li>Progress tracking and skill assessment</li>
@@ -203,12 +224,15 @@
           margin-bottom: 1.25rem;
           padding-bottom: 1.25rem;
           border-bottom: 1px solid #e2e8f0;
+          min-height: 60px;
       }
 
       .feature-header h3 {
           font-size: 1.5rem;
           font-weight: 700;
           color: #1a202c;
+          margin: 0;
+          line-height: 1.2;
       }
 
       .dark .feature-header h3 {
@@ -218,6 +242,8 @@
       .feature-author {
           font-size: 0.875rem;
           color: #718096;
+          padding-top: 0.25rem;
+          text-align: right;
       }
 
       .feature-author a {
@@ -243,6 +269,7 @@
           flex: 1;
           display: flex;
           flex-direction: column;
+          height: 100%;
       }
 
       .feature-content p {
@@ -259,6 +286,7 @@
           margin: 1rem 0;
           padding-left: 1.5rem;
           list-style-type: disc;
+          min-height: 80px;
       }
 
       .feature-highlights li {
@@ -274,23 +302,22 @@
       .feature-actions {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
+          align-items: center;
           margin-top: auto;
           padding-top: 1.5rem;
+          width: 100%;
       }
 
       .btn {
           padding: 0.625rem 1.25rem;
-          border-radius: 0.375rem;
+          border-radius: 0.5rem;
           font-weight: 600;
           text-align: center;
           transition: all 0.2s;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
           text-decoration: none;
-          height: 40px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
+          min-width: 100px;
+          display: inline-block;
       }
 
       .btn-primary {
@@ -325,12 +352,6 @@
           display: flex;
           align-items: center;
           gap: 0.75rem;
-          position: relative;
-          margin-bottom: 1.5rem;
-          min-height: 2.5rem;
-          /* Ensure minimum height for proper display */
-          margin-top: 0.25rem;
-          /* Add top margin to align with button */
       }
 
       /* Styling for vote count display */
@@ -345,7 +366,7 @@
       .thumbs-down {
           background: none;
           border: 1px solid #e2e8f0;
-          padding: 0.625rem 0.75rem;
+          padding: 0.5rem 0.625rem;
           border-radius: 0.375rem;
           display: inline-flex;
           align-items: center;
@@ -493,15 +514,6 @@
               width: 100%;
               justify-content: flex-start;
               margin-bottom: 2rem;
-              margin-top: 0;
-              /* Reset margin top on mobile */
-          }
-
-          .btn {
-              width: 100%;
-              /* Make buttons full width on mobile */
-              display: block;
-              text-align: center;
           }
 
           .voting-message {
@@ -523,6 +535,33 @@
 
       .dark .count-updated {
           color: #f6ad55;
+      }
+
+      /* Feature Image Styling */
+      .feature-image {
+          width: 100%;
+          height: 180px;
+          margin-bottom: 1.25rem;
+          border-radius: 0.5rem;
+          overflow: hidden;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          background-color: #f7fafc;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          box-sizing: border-box;
+          padding: 1rem;
+      }
+
+      .dark .feature-image {
+          background-color: #2d3748;
+      }
+
+      .feature-img {
+          max-width: 100%;
+          height: auto;
+          object-fit: contain;
+          border-radius: 0.25rem;
       }
   </style>
   <!-- JavaScript for features page functionality -->
@@ -628,7 +667,6 @@
 
           // Voting functionality
           const thumbButtons = document.querySelectorAll('.thumbs-up, .thumbs-down');
-
           // Check for existing votes in localStorage
           thumbButtons.forEach(button => {
               const featureId = button.dataset.featureId;
