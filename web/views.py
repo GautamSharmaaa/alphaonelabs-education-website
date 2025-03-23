@@ -41,7 +41,7 @@ from django.utils.crypto import get_random_string
 from django.utils.html import strip_tags
 from django.views import generic
 from django.views.decorators.clickjacking import xframe_options_exempt
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.views.decorators.http import require_GET, require_POST
 from django.views.generic import (
     CreateView,
@@ -104,6 +104,7 @@ from .models import (
     EducationalVideo,
     Enrollment,
     EventCalendar,
+    FeatureVote,
     ForumCategory,
     ForumReply,
     ForumTopic,
@@ -4695,3 +4696,55 @@ def run_create_test_data(request):
         messages.error(request, f"Error creating test data: {str(e)}")
 
     return redirect("index")
+
+
+def features(request):
+    """View for the features showcase page."""
+    return render(request, "features.html")
+
+
+@csrf_protect
+@require_POST
+def feature_vote(request):
+    """Record votes on platform features."""
+    feature_id = request.POST.get("feature_id")
+    vote_type = request.POST.get("vote")
+
+    if not feature_id or vote_type not in ["up", "down"]:
+        return JsonResponse({"status": "error", "message": "Invalid parameters"}, status=400)
+
+    # Store IP for anonymous users
+    ip_address = None
+    if not request.user.is_authenticated:
+        ip_address = request.META.get("REMOTE_ADDR")
+
+    # Check for existing vote
+    existing_vote = None
+    if request.user.is_authenticated:
+        existing_vote = FeatureVote.objects.filter(feature_id=feature_id, user=request.user).first()
+    elif ip_address:
+        existing_vote = FeatureVote.objects.filter(feature_id=feature_id, ip_address=ip_address).first()
+
+    if existing_vote:
+        if existing_vote.vote != vote_type:
+            existing_vote.vote = vote_type
+            existing_vote.save()
+        return JsonResponse({"status": "success", "message": "Vote updated"})
+
+    # Create new vote
+    new_vote = FeatureVote(feature_id=feature_id, vote=vote_type)
+
+    if request.user.is_authenticated:
+        new_vote.user = request.user
+    else:
+        new_vote.ip_address = ip_address
+
+    new_vote.save()
+
+    # Get updated counts
+    up_count = FeatureVote.objects.filter(feature_id=feature_id, vote="up").count()
+    down_count = FeatureVote.objects.filter(feature_id=feature_id, vote="down").count()
+
+    return JsonResponse(
+        {"status": "success", "message": "Vote recorded", "up_count": up_count, "down_count": down_count}
+    )

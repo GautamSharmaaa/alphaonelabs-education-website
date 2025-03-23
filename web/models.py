@@ -2199,3 +2199,25 @@ class PeerChallengeInvitation(models.Model):
             message=f"{self.participant.username} has completed your challenge: {self.challenge.title}",
             notification_type="success",
         )
+
+
+class FeatureVote(models.Model):
+    """Store votes on platform features."""
+
+    VOTE_CHOICES = (
+        ("up", "Thumbs Up"),
+        ("down", "Thumbs Down"),
+    )
+
+    feature_id = models.CharField(max_length=100)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    vote = models.CharField(max_length=4, choices=VOTE_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("feature_id", "user", "ip_address")
+
+    def __str__(self):
+        user_identifier = self.user.username if self.user else f"IP: {self.ip_address}"
+        return f"{user_identifier} - {self.get_vote_display()} for {self.feature_id}"
