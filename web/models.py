@@ -1809,22 +1809,22 @@ class UserQuiz(models.Model):
         for q_id, answer_data in self.answers.items():
             try:
                 question = QuizQuestion.objects.get(id=q_id)
-                max_score += question.point
+                max_score += question.points
 
                 if question.question_type == "multiple":
                     # Check if selected options match correct option
                     correct_options = set(question.options.filter(is_correct=True).values_list("id", flat=True))
                     selected_options = set(answer_data.get("selected_options", []))
                     if correct_options == selected_options:
-                        score += question.point
+                        score += question.points
                 elif question.question_type == "true_false":
                     # For true/false, there should be only one correct option
                     correct_option = question.options.filter(is_correct=True).first()
                     if correct_option and str(correct_option.id) == str(answer_data.get("selected_option")):
-                        score += question.point
+                        score += question.points
                 elif question.question_type == "short":
                     # Short answers require manual grading in this implementation
-                    # We could implement auto-grading logic here for simple case
+                    # We could implement auto-grading logic here for simple cases
                     pass
             except QuizQuestion.DoesNotExist:
                 pass
