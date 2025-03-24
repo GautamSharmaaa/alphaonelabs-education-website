@@ -242,7 +242,7 @@ class Course(models.Model):
             right = (width + min_dim) / 2
             bottom = (height + min_dim) / 2
             img = img.crop((left, top, right, bottom))
-            # Resize the image to 300x300 pixels
+            # Resize the image to 300x300 pixel
             img = img.resize((500, 500), Image.Resampling.LANCZOS)
             # Save the resized image
             buffer = BytesIO()
@@ -285,7 +285,7 @@ class Session(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # Rollover fields
+    # Rollover field
     enable_rollover = models.BooleanField(
         default=False, help_text="Enable automatic date rollover if no students are enrolled"
     )
@@ -321,7 +321,7 @@ class Session(models.Model):
             self.original_start_time = self.start_time
             self.original_end_time = self.end_time
 
-        # Handle virtual meeting creation/updates
+        # Handle virtual meeting creation/update
         is_new = self._state.adding
         old_instance = None if is_new else Session.objects.get(pk=self.pk)
 
@@ -351,7 +351,7 @@ class Session(models.Model):
 
         now = timezone.now()
         if self.start_time > now:
-            return False  # Don't roll forward future sessions
+            return False  # Don't roll forward future session
 
         # Calculate new dates based on pattern
         if self.rollover_pattern == "daily":
@@ -374,7 +374,7 @@ class Session(models.Model):
         return True
 
     def delete(self, *args, **kwargs):
-        # Delete associated calendar event if exists
+        # Delete associated calendar event if exist
         if self.is_virtual and self.meeting_id:
             from .calendar_sync import delete_calendar_event
 
@@ -1002,14 +1002,14 @@ class Goods(models.Model):
         if self.discount_price and self.discount_price >= self.price:
             raise ValidationError("Discount price must be lower than original price.")
 
-        # Validate digital product constraints
+        # Validate digital product constraint
         if self.product_type == "digital":
             if self.stock is not None:
                 raise ValidationError("Digital products cannot have stock quantities.")
             if not self.file:
                 raise ValidationError("Digital products require a file upload.")
 
-        # Validate physical product constraints
+        # Validate physical product constraint
         if self.product_type == "physical" and self.stock is None:
             raise ValidationError("Physical products must have a stock quantity.")
 
@@ -1081,7 +1081,7 @@ class CartItem(models.Model):
         return "Unknown item in cart"
 
 
-# Constants
+# Constant
 ENROLLMENT_STATUS_CHOICES = [
     ("pending", "Pending"),
     ("approved", "Approved"),
@@ -1809,22 +1809,22 @@ class UserQuiz(models.Model):
         for q_id, answer_data in self.answers.items():
             try:
                 question = QuizQuestion.objects.get(id=q_id)
-                max_score += question.points
+                max_score += question.point
 
                 if question.question_type == "multiple":
-                    # Check if selected options match correct options
+                    # Check if selected options match correct option
                     correct_options = set(question.options.filter(is_correct=True).values_list("id", flat=True))
                     selected_options = set(answer_data.get("selected_options", []))
                     if correct_options == selected_options:
-                        score += question.points
+                        score += question.point
                 elif question.question_type == "true_false":
                     # For true/false, there should be only one correct option
                     correct_option = question.options.filter(is_correct=True).first()
                     if correct_option and str(correct_option.id) == str(answer_data.get("selected_option")):
-                        score += question.points
+                        score += question.point
                 elif question.question_type == "short":
                     # Short answers require manual grading in this implementation
-                    # We could implement auto-grading logic here for simple cases
+                    # We could implement auto-grading logic here for simple case
                     pass
             except QuizQuestion.DoesNotExist:
                 pass
@@ -1846,12 +1846,12 @@ class UserQuiz(models.Model):
     def duration(self):
         """Return the duration of the quiz attempt as a formatted string."""
         if self.start_time and self.end_time:
-            # Calculate duration in seconds
+            # Calculate duration in second
             duration_seconds = (self.end_time - self.start_time).total_seconds()
 
             # Format the duration
             if duration_seconds < 60:
-                # Show with decimal precision for small durations
+                # Show with decimal precision for small duration
                 if duration_seconds < 10:
                     return f"{duration_seconds:.1f}s"
                 return f"{int(duration_seconds)}s"
@@ -1870,7 +1870,7 @@ class UserQuiz(models.Model):
 
             # Format the duration
             if duration_seconds < 60:
-                # Show with decimal precision for small durations
+                # Show with decimal precision for small duration
                 if duration_seconds < 10:
                     return f"{duration_seconds:.1f}s"
                 return f"{int(duration_seconds)}s"
@@ -1988,13 +1988,13 @@ class GradeableLink(models.Model):
         grades = self.grades.all()
         distribution = {}
 
-        # Initialize with all possible grades
+        # Initialize with all possible grade
         for grade_code, grade_name in LinkGrade.GRADE_CHOICES:
             # Group by main letter for simplicity (A+, A, A- all grouped as A)
             main_letter = grade_code[0]
             distribution[main_letter] = distribution.get(main_letter, 0)
 
-        # Count actual grades
+        # Count actual grade
         for grade in grades:
             main_letter = grade.grade[0]
             distribution[main_letter] = distribution.get(main_letter, 0) + 1
@@ -2119,7 +2119,7 @@ class PeerChallenge(models.Model):
                 }
             )
 
-        # Add invited participants' best attempts
+        # Add invited participants' best attempt
         for invitation in self.invitations.filter(status="completed"):
             participant_attempt = invitation.user_quiz
             if participant_attempt and participant_attempt.completed:
@@ -2226,7 +2226,8 @@ class FeatureVote(models.Model):
     def __str__(self):
         user_identifier = self.user.username if self.user else f"IP: {self.ip_address}"
         return f"{user_identifier} - {self.get_vote_display()} for {self.feature_id}"
-      
+
+
 class NoteHistory(models.Model):
     """Model for tracking changes to teacher notes on enrollments."""
 
