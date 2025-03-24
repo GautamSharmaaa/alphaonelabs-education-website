@@ -2226,6 +2226,21 @@ class FeatureVote(models.Model):
     def __str__(self):
         user_identifier = self.user.username if self.user else f"IP: {self.ip_address}"
         return f"{user_identifier} - {self.get_vote_display()} for {self.feature_id}"
+      
+class NoteHistory(models.Model):
+    """Model for tracking changes to teacher notes on enrollments."""
+
+    enrollment = models.ForeignKey(Enrollment, on_delete=models.CASCADE, related_name="note_history")
+    content = models.TextField()
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="note_history_entries")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.created_by.username} updated notes for {self.enrollment.student.username}"
 
 
 class NotificationPreference(models.Model):
